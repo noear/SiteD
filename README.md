@@ -23,12 +23,12 @@ public class Source extends SdSource {
         hots = (SdNode) home.get("hots");
         updates = (SdNode) home.get("updates");
         tags = (SdNode) home.get("tags");
+        
         search = (SdNode) main.get("search");
 
+        tag = (SdNode) main.get("tag");
         book = (SdNode) main.get("book");
         section = (SdNode) main.get("section");
-
-        tag = (SdNode) main.get("tag");
     }
 
     @Override
