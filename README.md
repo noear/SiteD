@@ -28,11 +28,7 @@ public class Source extends SdSource {
         book = (SdNode) main.get("book");
         section = (SdNode) main.get("section");
 
-        SdNode temp = (SdNode) main.get("tag");
-        if (temp.isEmpty()) //旧版本
-            tag = tags;
-        else
-            tag = temp; //新版本增加的:tags负责获取tag列表；tag负责获取解析tag.url的数据
+        tag = (SdNode) main.get("tag");
     }
 
     @Override
