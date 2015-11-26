@@ -1,7 +1,7 @@
 # SiteD
 SiteD
 
-插件引擎实例（具本要根据应用面来定制自己的引擎）
+插件引擎实例（具本要根据应用的需求来定制引擎实例）
 ```java
 public class Source extends SdSource {
 
