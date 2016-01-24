@@ -23,12 +23,30 @@ public class Source extends SdSource {
         hots = (SdNode) home.get("hots");
         updates = (SdNode) home.get("updates");
         tags = (SdNode) home.get("tags");
-        
+
         search = (SdNode) main.get("search");
 
-        tag = (SdNode) main.get("tag");
         book = (SdNode) main.get("book");
         section = (SdNode) main.get("section");
+
+        SdNode temp = (SdNode) main.get("tag");
+        if (temp.isEmpty()) //旧版本
+            tag = tags;
+        else
+            tag = temp; //新版本增加的:tags负责获取tag列表；tag负责获取解析tag.url的数据
+    }
+
+    private String _FullTitle;
+    public String fullTitle() {
+        if (_FullTitle == null) {
+            int idx = url.indexOf('?');
+            if (idx < 0)
+                _FullTitle = title + " (" + url + ")";
+            else
+                _FullTitle = title + " (" + url.substring(0, idx) + ")";
+        }
+
+        return _FullTitle;
     }
 
     @Override
@@ -87,5 +105,10 @@ public class Source extends SdSource {
             return true;
         }
     }
+
+    public String getWebOnloadCode(SdNode config){
+        return config.funs("web_onload");
+    }
 }
+
 ```
