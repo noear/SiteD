@@ -2,7 +2,6 @@ package org.noear.sited;
 
 import android.content.Context;
 import android.os.Handler;
-import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -14,7 +13,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import java.io.File;
 import java.io.StringReader;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
@@ -47,12 +45,27 @@ class Util {
             return null;
     }
 
+    protected static String getElementVal(Element n, String tag) {
+        NodeList temp = n.getElementsByTagName(tag);
+        if(temp.getLength()>0)
+            return temp.item(0).getTextContent();
+        else
+            return null;
+    }
+
     protected static Element getXmlroot(String xml) throws Exception {
         StringReader sr = new StringReader(xml);
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dombuild = factory.newDocumentBuilder();
 
         return dombuild.parse(new InputSource(sr)).getDocumentElement();
+    }
+
+    protected static  int parseInt(String str) {
+        if (TextUtils.isEmpty(str))
+            return 0;
+        else
+            return Integer.parseInt(str);
     }
 
     //
@@ -67,10 +80,23 @@ class Util {
         }
     }
 
-    protected static void http(SdSource source, boolean isUpdate, String url, Map<String, String> params, SdNode config, HttpCallback callback) {
+    protected static void http(SdSource source, boolean isUpdate, String url, Map<String, String> params, int tag, SdNode config, HttpCallback callback) {
         __CacheBlock block = null;
+        String cacheKey2 = null;
+        if(params==null)
+            cacheKey2 = url;
+        else{
+            StringBuilder sb = new StringBuilder();
+            sb.append(url);
+            for(String key : params.keySet()){
+                sb.append(key).append("=").append(params.get(key)).append(";");
+            }
+            cacheKey2 = sb.toString();
+        }
+        final String cacheKey = cacheKey2;
+
         if (isUpdate == false && config.cache > 0) {
-            block = cache.get(url);
+            block = cache.get(cacheKey);
         }
 
         if (block != null) {
@@ -79,37 +105,44 @@ class Util {
 
                 new Handler().postDelayed(() -> {
                     Log.v("Util.incache.url", url);
-                    callback.run(1, block1.value);
-                },100);
+                    callback.run(1, tag, block1.value);
+                }, 100);
                 return;
             }
         }
 
-        doHttp(source, url, params, config, block, (code, data) -> {
+        doHttp(source, url, params, tag, config, block, (code, tag2, data) -> {
             if (code == 1 && config.cache > 0) {
-                cache.save(url, data);
+                cache.save(cacheKey, data);
             }
 
-            callback.run(code, data);
+            callback.run(code, tag2, data);
         });
     }
 
-    private static void doHttp(SdSource source, String url, Map<String, String> params, SdNode config, __CacheBlock cache, HttpCallback callback) {
+    private static void doHttp(SdSource source, String url, Map<String, String> params, int tag, SdNode config, __CacheBlock cache, HttpCallback callback) {
         AsyncHttpClient client = new AsyncHttpClient();
         client.setUserAgent(source.ua());
         client.setURLEncodingEnabled(url.indexOf(" ") > 0);
 
-        if (config.isInCookie() && source.cookies() != null) {
-            client.addHeader("Cookie", source.cookies());
+        if (config.isInCookie()) {
+            String cookies = config.cookies(url);
+            if (cookies != null) {
+                client.addHeader("Cookie", cookies);
+            }
         }
 
         if (config.isInReferer()) {
             client.addHeader("Referer", source.buildReferer(config, url));
         }
 
-        if (TextUtils.isEmpty(config.accept) == false) {
-            client.addHeader("Accept", config.accept);
-            client.addHeader("X-Requested-With", "XMLHttpRequest");
+        if(TextUtils.isEmpty(config.header) == false) {
+            for (String kv : config.header.split(";")) {
+                String[] kv2 = kv.split("=");
+                if (kv2.length == 2) {
+                    client.addHeader(kv2[0], kv2[1]);
+                }
+            }
         }
 
         TextHttpResponseHandler responseHandler = new TextHttpResponseHandler(config.encode()) {
@@ -117,9 +150,9 @@ class Util {
             @Override
             public void onFailure(int statusCode, cz.msebera.android.httpclient.Header[] headers, String s, Throwable throwable) {
                 if (cache == null)
-                    callback.run(-2, null);
+                    callback.run(-2, tag, null);
                 else
-                    callback.run(1, cache.value);
+                    callback.run(1, tag, cache.value);
             }
 
             @Override
@@ -131,25 +164,32 @@ class Util {
                     }
                 }
 
-                callback.run(1, s);
+                callback.run(1, tag, s);
             }
         };
 
 
-
         try {
+            int idx = url.indexOf('#'); //去除hash，即#.*
+            String url2 = null;
+            if(idx>0)
+                url2 = url.substring(0,idx);
+            else
+                url2 = url;
+
             if ("post".equals(config.method)) {
                 RequestParams postData = new RequestParams(params);
                 postData.setContentEncoding(config.encode());
-                client.post(url, postData, responseHandler);
+
+                client.post(url2, postData, responseHandler);
             } else {
-                client.get(url, responseHandler);
+                client.get(url2, responseHandler);
             }
         } catch (Exception ex) {
             if (cache == null)
-                callback.run(-2, null);
+                callback.run(-2, tag, null);
             else
-                callback.run(1, cache.value);
+                callback.run(1, tag, cache.value);
         }
     }
 
@@ -201,7 +241,7 @@ class Util {
             log(source, node.name, json);
     }
 
-    private static void log(SdSource source, String tag, String msg) {
+    public static void log(SdSource source, String tag, String msg) {
         Log.v(tag, msg);
 
         if (SdSource.logListener != null) {

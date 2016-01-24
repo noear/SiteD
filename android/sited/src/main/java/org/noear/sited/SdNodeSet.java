@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * Created by yuety on 15/8/21.
  */
-public class SdNodeSet implements ISdNode{
+public class SdNodeSet implements ISdNode {
 
     public int nodeType(){return 2;}
 
@@ -22,7 +22,7 @@ public class SdNodeSet implements ISdNode{
         _source = source;
     }
 
-    protected SdNodeSet(SdSource source,Element element) {
+    protected SdNodeSet(SdSource source, Element element) {
         this(source);
 
         loadByElement(element);
