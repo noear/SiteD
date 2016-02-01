@@ -4,8 +4,13 @@ import android.app.Application;
 import android.text.TextUtils;
 
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,110 +20,96 @@ import java.util.regex.Pattern;
  */
 public class SdSource {
 
-    public final String sds; //插件平台服务
-    public final String expr;//匹配源的表达式
+    public final SdAttributeList attrs = new SdAttributeList();
 
     public final boolean isDebug;//是否为调试模式
-    public final boolean isPrivate;//是否为私密型插件
-
-    public final int dtype;//数据类型
-    public final String durl;//数据url（url是给外面看的；durl是真实的地址）
-
-    public final int engine;
 
     public final String url_md5;
     public final String url;  //源首页
-    public final Integer ver; //版本号
-
-    public final String author;
     public final String title; //标题
-    public final String intro; //介绍
-    public final String alert; //提醒（打开时跳出）
-    public final String logo;  //图标
+    public final String expr;//匹配源的表达式
 
-    public final SdNodeSet main;//源main节点
+    private final String _encode;//编码
+    public String encode(){return _encode;}
 
-    public final boolean showWeb;
+    private final String _ua;
+    public String ua(){if(TextUtils.isEmpty(_ua)){return Util.defUA;}else{ return _ua;}}
 
-    protected final String encode;//编码
+    protected final SdNodeSet _main;//源main节点
+    protected final SdJscript jscript;
+
+    private final JsEngine js;//不能作为属性
+
     private String _cookies;
     public String cookies(){
         return _cookies;
     }
-
     public void setCookies(String cookies){
         _cookies = cookies;
-    }
-
-    private SdJscript jscript;
-    private String _ua;
-
-    public String ua() {
-        if (TextUtils.isEmpty(_ua))
-            return Util.defUA;
-        else
-            return _ua;
     }
 
     public void delCache(String key){
         Util.cache.delete(key);
     }
 
-    //给Util调用
-    public static SdLogListener logListener;
-
-    //解析
+    //
+    //--------------------------------
+    //
     public SdSource(Application app, String xml) throws Exception {
 
         Util.tryInitCache(app.getApplicationContext());
 
-        main = new SdNodeSet(this);
+        _main = Util.createNodeSet(this);
 
         Element root = Util.getXmlroot(xml);
 
-        ver = Util.parseInt(root.getAttribute("ver"));
-        engine = Util.parseInt(root.getAttribute("engine"));
+        {
+            NamedNodeMap temp = root.getAttributes();
+            for (int i = 0, len = temp.getLength(); i < len; i++) {
+                Node p = temp.item(i);
+                attrs.set(p.getNodeName(), p.getNodeValue());
+            }
+        }
 
-        sds = root.getAttribute("sds");
-        isDebug = "1".equals(root.getAttribute("debug"));
-        isPrivate = "1".equals(root.getAttribute("private"));
+        {
+            NodeList temp = root.getChildNodes();
+            for (int i = 0, len = temp.getLength(); i < len; i++) {
+                Node p = temp.item(i);
 
-        expr = Util.getElementVal(root, "expr");
-        url = Util.getElementVal(root, "url");
+                if (p.getNodeType() == Node.ELEMENT_NODE && p.hasAttributes() == false &&  p.hasChildNodes()) {
+                    Node p2 = p.getFirstChild();
+                    if(p2.getNodeType() == Node.TEXT_NODE) {
+                        attrs.set(p.getNodeName(), p2.getNodeValue());
+                    }
+                }
+            }
+        }
+
+
+        isDebug = attrs.getInt("debug") > 0;
+
+        title = attrs.getString("title");
+        expr = attrs.getString("expr");
+        url = attrs.getString("url");
         url_md5 = Util.md5(url);
 
-
-        author = Util.getElementVal(root, "author");
-        title = Util.getElementVal(root, "title");
-        intro = Util.getElementVal(root, "intro");
-
-        if (engine > SdApi.version)
-            alert = "此插件需要更高版本引擎支持，否则会出错。建议升级！";
-        else
-            alert = Util.getElementVal(root, "alert");
-
-        logo = Util.getElementVal(root, "logo");
-        encode = Util.getElementVal(root, "encode");
-        _ua = Util.getElementVal(root, "ua");
+        _encode = attrs.getString("encode");
+        _ua     = attrs.getString("ua");
 
         jscript = new SdJscript(this, Util.getElement(root, "jscript"));
 
-        Element xMain = Util.getElement(root, "main");
-        showWeb = ("0".equals(xMain.getAttribute("showWeb"))) == false;
-        dtype = Integer.parseInt(xMain.getAttribute("dtype"));
-        String temp = xMain.getAttribute("durl");
-        if (TextUtils.isEmpty(temp))
-            durl = url;
-        else
-            durl = temp;
-
-        main.loadByElement(xMain);
+        _main.buildForNode(Util.getElement(root, "main"));
 
         js = new JsEngine(app, this);
         jscript.loadJs(app, js);
+
+        OnDidInit();
     }
 
-    private JsEngine js;//不能作为属性
+    public void OnDidInit(){
+
+    }
+
 
     //
     //------------
@@ -142,6 +133,11 @@ public class SdSource {
         }
     }
 
+    protected String callJs(SdNode config, String funAttr, String... args) {
+        return js.callJs(config.attrs.getString(funAttr), args);
+    }
+    //-------------
+
     public String buildArgs(SdNode config, String url, String key, int page) {
         if (TextUtils.isEmpty(config.buildArgs))
             return config.args;
@@ -149,12 +145,13 @@ public class SdSource {
             return js.callJs(config.buildArgs, url, key, page + "", config.jsTag);
     }
 
-    public String buildWeb(SdNode config, String url) {
-        if (TextUtils.isEmpty(config.buildWeb))
-            return url;
+    public String buildArgs(SdNode config, String url, int page) {
+        if (TextUtils.isEmpty(config.buildArgs))
+            return config.args;
         else
-            return js.callJs(config.buildWeb, url, config.jsTag);
+            return js.callJs(config.buildArgs, url, page + "", config.jsTag);
     }
+
 
     public String buildUrl(SdNode config, String url) {
         if (TextUtils.isEmpty(config.buildUrl))
@@ -171,7 +168,7 @@ public class SdSource {
         }
     }
 
-    public String buildUrl(SdNode config, String url, String key, Integer page) {
+    public String buildUrl(SdNode config,  String url, String key, Integer page) {
         if (TextUtils.isEmpty(config.buildUrl))
             return url;
         else {
@@ -233,7 +230,11 @@ public class SdSource {
         if ("post".equals(config.method)) {
             args = new HashMap<String, String>();
 
-            String _strArgs = buildArgs(config,url,key,page);
+            String _strArgs = null;
+            if (key == null)
+                _strArgs = buildArgs(config, url, page);
+            else
+                _strArgs = buildArgs(config, url, key, page);
 
             if (TextUtils.isEmpty(_strArgs) == false) {
                 for (String kv : _strArgs.split(";")) {
@@ -276,11 +277,16 @@ public class SdSource {
 
                             tag.value++;
                             if (tag.total == tag.value) {
+                                List<String> jsonList = new ArrayList<String>();
                                 for (Integer i = 1; i <= tag.total; i++) { //安排序加载内容
                                     if (dataList.containsKey(i)) {
-                                        viewModel.loadByJson(config, dataList.get(i));
+                                        jsonList.add(dataList.get(i));
                                     }
                                 }
+
+                                String[] strAry = new String[jsonList.size()];
+                                jsonList.toArray(strAry);
+                                viewModel.loadByJson(config, strAry);
 
                                 callback.run(code);
                             }
@@ -301,7 +307,7 @@ public class SdSource {
         getNodeViewModel(viewModel, isUpdate, null, page, config, callback);
     }
 
-    public void getNodeViewModel(ISdViewModel viewModel, boolean isUpdate, String url, SdNode config, SdSourceCallback callback) {
+    public void getNodeViewModel(ISdViewModel viewModel, boolean isUpdate,  String url, SdNode config, SdSourceCallback callback) {
         //需要对url进行转换成最新的格式（可能之前的旧的格式缓存）
 
         __AsyncTag tag = new __AsyncTag();
@@ -313,7 +319,7 @@ public class SdSource {
         }
     }
 
-    private void doGetNodeViewModel(ISdViewModel viewModel, boolean isUpdate, final __AsyncTag tag, String url, Map<String, String> args, SdNode config, SdSourceCallback callback) {
+    private void doGetNodeViewModel(ISdViewModel viewModel, boolean isUpdate, final __AsyncTag tag,  String url, Map<String, String> args, SdNode config, SdSourceCallback callback) {
         //需要对url进行转换成最新的格式（可能之前的旧的格式缓存）
 
         if (config.isEmpty())
@@ -354,11 +360,15 @@ public class SdSource {
 
                                 tag.value++;
                                 if (tag.total == tag.value) {
+                                    List<String> jsonList = new ArrayList<String>();
                                     for (Integer i = 1; i <= tag.total; i++) { //安排序加载内容
                                         if (dataList.containsKey(i)) {
-                                            viewModel.loadByJson(config, dataList.get(i));
+                                            jsonList.add(dataList.get(i));
                                         }
                                     }
+                                    String[] strAry = new String[jsonList.size()];
+                                    jsonList.toArray(strAry);
+                                    viewModel.loadByJson(config, strAry);
                                     callback.run(code);
                                 }
                             });
@@ -406,7 +416,7 @@ public class SdSource {
         }
     }
 
-    private void doParse_noAddin(ISdViewModel viewModel, SdNode config, String url, String text) {
+    private void doParse_noAddin(ISdViewModel viewModel,SdNode config,String url,String text) {
         String json = this.parse(config, url, text);
         if (isDebug) {
             Util.log(this, config, url, json);
@@ -417,28 +427,29 @@ public class SdSource {
         }
     }
 
-    private void doParse_hasAddin(ISdViewModel viewModel, SdNode config, String url, String text){
+    private void doParse_hasAddin(ISdViewModel viewModel, SdNode config, String url, String text) {
         String json = this.parse(config, url, text);
 
-        if(isDebug) {
-            Util.log(this,config, url, json);
+        if (isDebug) {
+            Util.log(this, config, url, json);
         }
 
         if (json != null) {
             viewModel.loadByJson(config, json);
 
             if (config.hasAdds()) { //没有url的add
-                for (SdNode n1 : config.adds()) {
-                    if (TextUtils.isEmpty(n1.buildUrl) == false)
+                for (SdNode n2 : config.adds()) {
+                    if (TextUtils.isEmpty(n2.buildUrl) == false)
                         continue;
 
-                    String json2 = this.parse(n1, url, text);
-                    if(isDebug) {
-                        Util.log(this,n1, url, json2);
+                    String json2 = this.parse(n2, url, text);
+                    if (isDebug) {
+                        Util.log(this, n2, url, json2);
                     }
 
-                    if (json2 != null)
-                        viewModel.loadByJson(n1, json2);
+                    if (json2 != null) {
+                        viewModel.loadByJson(n2, json2);
+                    }
                 }
             }
         }

@@ -1,6 +1,7 @@
 package org.noear.sited;
 
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -10,29 +11,42 @@ import java.util.Map;
 /**
  * Created by yuety on 15/8/21.
  */
-public class SdNodeSet implements ISdNode {
-
-    public int nodeType(){return 2;}
+public class SdNodeSet implements ISdNode{
 
     Map<String,ISdNode> _items;
-    SdSource _source;
 
-    protected SdNodeSet(SdSource source){
+    public final SdSource source;
+
+    //---------------
+
+    public SdNodeSet(SdSource s){
         _items  = new HashMap<>();
-        _source = source;
+        source = s;
     }
 
-    protected SdNodeSet(SdSource source, Element element) {
-        this(source);
+    public void OnDidInit(){
 
-        loadByElement(element);
     }
 
-    protected void loadByElement(Element element){
+    public int nodeType(){return 2;}
+    public final SdAttributeList attrs = new SdAttributeList();
+
+
+    protected SdNodeSet buildForNode(Element element) {
         if(element==null)
-            return;
+            return this;
 
         _items.clear();
+        attrs.clear();
+
+        {
+            NamedNodeMap temp = element.getAttributes();
+            for (int i = 0, len = temp.getLength(); i < len; i++) {
+                Node p = temp.item(i);
+                attrs.set(p.getNodeName(), p.getNodeValue());
+            }
+        }
+
 
         NodeList xList = element.getChildNodes();
 
@@ -42,14 +56,17 @@ public class SdNodeSet implements ISdNode {
                 Element e1 = (Element) n1;
 
                 if (e1.hasAttributes()) {//说明是Node类型
-                    SdNode temp = new SdNode(_source, e1);
+                    SdNode temp = Util.createNode(source).buildForNode(e1);
                     this.add(e1.getTagName(), temp);
                 } else {//说明是Set类型
-                    SdNodeSet temp = new SdNodeSet(_source, e1);
+                    SdNodeSet temp = Util.createNodeSet(source).buildForNode(e1);
                     this.add(e1.getTagName(), temp);
                 }
             }
         }
+
+        OnDidInit();
+        return this;
     }
 
     public Iterable<ISdNode> nodes(){
@@ -60,7 +77,7 @@ public class SdNodeSet implements ISdNode {
         if(_items.containsKey(name))
             return _items.get(name);
         else
-            return new SdNode(_source,null);
+            return Util.createNode(source).buildForNode(null);
     }
 
     protected void add(String name, ISdNode node){

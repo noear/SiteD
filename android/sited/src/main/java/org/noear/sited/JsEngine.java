@@ -1,6 +1,7 @@
 package org.noear.sited;
 
 import android.app.Application;
+import android.util.Log;
 
 import com.eclipsesource.v8.JavaVoidCallback;
 import com.eclipsesource.v8.Releasable;

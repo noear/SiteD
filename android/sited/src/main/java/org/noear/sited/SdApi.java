@@ -4,15 +4,21 @@ package org.noear.sited;
  * Created by yuety on 15/12/19.
  */
 public class SdApi {
-    /*
-    * v11: 优化周边插件（与阿里百川sdk进一步整合）
-    * v10: 增加图片、资讯、周边插件
-    * v9 : 增加对#hash的过滤处理；增加hasMicroDefine()
-    * v8 : 增加parseUrl()->"xxx;xxxx;xxx"的支持
-    * */
-    public final static int version = 11;
 
-    public static void tryInit() {
+    protected static ISdFactory _factory;
+    protected static SdLogListener _listener;
 
+    public static void tryInit(ISdFactory factory, SdLogListener listener) {
+        if (_factory == null)
+            _factory = factory;
+
+        if (_listener == null)
+            _listener = listener;
+    }
+
+    protected static void check() throws Exception {
+        if (_factory == null || _listener == null) {
+            throw new Exception("未初始化");
+        }
     }
 }

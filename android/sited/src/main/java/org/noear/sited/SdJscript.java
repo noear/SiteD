@@ -8,9 +8,13 @@ import android.util.Log;
 import org.w3c.dom.Element;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by yuety on 15/8/26.
@@ -23,14 +27,13 @@ public class SdJscript {
     protected SdJscript(SdSource source, Element node) {
         s = source;
 
-        if(node == null){
+        if (node == null) {
             code = "";
-            require = new SdNode(source,null);
-        }else {
+            require = Util.createNode(source).buildForNode(null);
+        } else {
             code = Util.getElement(node, "code").getTextContent();
-            require = new SdNode(source, Util.getElement(node, "require"));
+            require = Util.createNode(source).buildForNode(Util.getElement(node, "require"));
         }
-
     }
 
     public void loadJs(Application app, JsEngine js) {
@@ -38,8 +41,8 @@ public class SdJscript {
             for (SdNode n1 : require.items()) {
 
                 //1.如果本地可以加载并且没有出错
-                if(TextUtils.isEmpty(n1.lib)==false){
-                    if(loadLib(app,js,n1.lib))
+                if (TextUtils.isEmpty(n1.lib) == false) {
+                    if (loadLib(app, js, n1.lib))
                         continue;
                 }
 
@@ -60,39 +63,40 @@ public class SdJscript {
         }
     }
 
-     boolean loadLib(Application app, JsEngine js, String lib) {
+    //---------------------
+    //
+    boolean loadLib(Application app, JsEngine js, String lib) {
 
-         //for debug
-         Resources asset = app.getResources();
+        //for debug
+        Resources asset = app.getResources();
 
-         switch (lib) {
-             case "md5":
-                 return tryLoadLibItem(asset, R.raw.md5, js);
+        switch (lib) {
+            case "md5":
+                return tryLoadLibItem(asset, R.raw.md5, js);
 
-             case "sha1":
-                 return tryLoadLibItem(asset, R.raw.sha1, js);
+            case "sha1":
+                return tryLoadLibItem(asset, R.raw.sha1, js);
 
-             case "base64":
-                 return tryLoadLibItem(asset, R.raw.base64, js);
+            case "base64":
+                return tryLoadLibItem(asset, R.raw.base64, js);
 
-             case "cheerio":
-                 return tryLoadLibItem(asset, R.raw.cheerio, js);
+            case "cheerio":
+                return tryLoadLibItem(asset, R.raw.cheerio, js);
 
-             default:
-                 return false;
-         }
-     }
+            default:
+                return false;
+        }
+    }
 
-    static boolean tryLoadLibItem(Resources asset, int resID, JsEngine js)
-    {
+    static boolean tryLoadLibItem(Resources asset, int resID, JsEngine js) {
         try {
             InputStream is = asset.openRawResource(resID);
-            BufferedReader in = new BufferedReader(new InputStreamReader(is,"utf-8"));
+            BufferedReader in = new BufferedReader(new InputStreamReader(is, "utf-8"));
             String code = doToString(in);
             js.loadJs(code);
 
             return true;
-        }catch (Exception ex){
+        } catch (Exception ex) {
             return false;
         }
     }
@@ -100,7 +104,7 @@ public class SdJscript {
     static String doToString(BufferedReader in) throws IOException {
         StringBuffer buffer = new StringBuffer();
         String line = "";
-        while ((line = in.readLine()) != null){
+        while ((line = in.readLine()) != null) {
             buffer.append(line);
         }
         return buffer.toString();

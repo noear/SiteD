@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.MessageDigest;
 import java.util.Date;
 
 class __FileCache implements __ICache {
@@ -95,7 +96,7 @@ class __FileCache implements __ICache {
         return doToString(in);
     }
 
-    static String doToString(BufferedReader in) throws IOException {
+    static String doToString(BufferedReader in) throws IOException{
         StringBuffer buffer = new StringBuffer();
         String line = "";
         while ((line = in.readLine()) != null){

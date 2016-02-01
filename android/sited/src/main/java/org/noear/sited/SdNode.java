@@ -8,18 +8,25 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
  * Created by yuety on 15/8/2.
  */
-public class SdNode implements ISdNode {
+public class SdNode implements ISdNode{
+
+    public SdNode(SdSource source){
+        this.source = source;
+    }
+
+    protected void OnDidInit(){
+
+    }
+
 
     public int nodeType(){return 1;}
+    public final SdAttributeList attrs = new SdAttributeList();
 
     //info
     public String name; //节点名称
@@ -31,25 +38,15 @@ public class SdNode implements ISdNode {
 
     protected String lib;
 
-    private int _dtype;
-    public int dtype(){
-        if(_dtype==0)
-            return source.dtype;
-        else
-            return _dtype;
-    }
 
     //http
     public String header;   //http header 头需求: cookies|accept
     protected String method;//http method
-    //protected String accept;//http accept
 
     private String _encode;   //http 编码
     private String _ua;     //http ua
-    private String _run;
 
     public String jsTag="";//传递给js函数的扩展参数
-    public boolean showWeb=true;
 
     //cache
     protected int cache=1;//单位为秒(0不缓存；1不限时间)
@@ -62,43 +59,21 @@ public class SdNode implements ISdNode {
     protected String buildArgs;
     public String buildUrl;
     protected String buildRef;//
-    protected String buildWeb;
 
     //add prop for search or tag
     protected String addCookie; //需要添加的关键字
     protected String addKey; //需要添加的关键字
     protected int    addPage;//需要添加的页数值
 
-    protected String trySuffix;//".jpg|.png" 尝试不同的扩展名
-    public String screen;
-    protected Map<String,String> attrs = new HashMap<>();
-
 
     //ext prop (for post)
     public String args;
-
-    //宽高比例
-    public float WHp = 0;
 
     public final SdSource source;
 
     private boolean _isEmpty;
     public boolean isEmpty(){
         return _isEmpty;
-    }
-
-    public boolean isWebrun(){
-        if(_run==null)
-            return false;
-
-        return _run.indexOf("web")>=0;
-    }
-
-    public boolean isOutWebrun(){
-        if(_run==null)
-            return false;
-
-        return _run.indexOf("outweb")>=0;
     }
 
     //是否有宏定义@key,@page
@@ -181,22 +156,9 @@ public class SdNode implements ISdNode {
 
     public String encode(){
         if(TextUtils.isEmpty(_encode))
-            return source.encode;
+            return source.encode();
         else
             return _encode;
-    }
-
-    public  String[] getSuffixUrl(String url) {
-        if (TextUtils.isEmpty(trySuffix) || TextUtils.isEmpty(url))
-            return new String[]{url};
-        else {
-            String[] exts = trySuffix.split("\\|");
-            String[] urls = new String[exts.length];
-            for (int i=0,len=exts.length; i<len; i++) {
-                urls[i] = url.replaceAll(trySuffix, exts[i]);
-            }
-            return urls;
-        }
     }
 
 
@@ -220,16 +182,7 @@ public class SdNode implements ISdNode {
         return cookies;
     }
 
-    public SdNode(){
-        this.source = null;
-    }
-
-    private SdNode(SdSource source){
-        this.source = source;
-    }
-
-    protected SdNode(SdSource source, Element cfg) {
-        this.source = source;
+    protected SdNode buildForNode(Element cfg) {
         _isEmpty = (cfg == null);
 
         if (cfg != null) {
@@ -239,98 +192,50 @@ public class SdNode implements ISdNode {
             NamedNodeMap nnMap = cfg.getAttributes();
             for(int i=0,len=nnMap.getLength(); i<len; i++) {
                 Node att = nnMap.item(i);
-                attrs.put(att.getNodeName(), att.getNodeValue());
+                attrs.set(att.getNodeName(), att.getNodeValue());
             }
 
-            showWeb = ("0".equals(cfg.getAttribute("showWeb")))==false;
+            this.title   = attrs.getString("title");
+            this.method  = attrs.getString("method","get");
+            this.parse   = attrs.getString("parse");
+            this.parseUrl= attrs.getString("parseUrl");
+            this.url     = attrs.getString("url");
+            this.lib     = attrs.getString("lib");
+            this.expr    = attrs.getString("expr");
 
-            this.title   = cfg.getAttribute("title");
-            this.method  = cfg.getAttribute("method");
-            this.parse   = cfg.getAttribute("parse");
-            this.parseUrl= cfg.getAttribute("parseUrl");
-            this.url     = cfg.getAttribute("url");
-            this.lib     = cfg.getAttribute("lib");
-            this.expr    = cfg.getAttribute("expr");
-            this._run    = cfg.getAttribute("run");
-            this._encode = cfg.getAttribute("encode");
-            this._ua     = cfg.getAttribute("ua");
-            this.screen  = cfg.getAttribute("screen");
-
-            if(TextUtils.isEmpty(this.method)){
-                this.method = "get";
-            }
-
-            {
-                String temp = cfg.getAttribute("cache");
-                if(TextUtils.isEmpty(temp)==false){
-                    int len = temp.length();
-                    if(len==1){
-                        cache = Integer.parseInt(temp);
-                    }else if(len>1){
-                        cache = Integer.parseInt(temp.substring(0,len-1));
-
-                        String p = temp.substring(len-1);
-                        switch (p){
-                            case "d":cache=cache*24*60*60;break;
-                            case "h":cache=cache*60*60;break;
-                            case "m":cache=cache*60;break;
-                        }
-                    }
-                }
-            }
-
+            this._encode = attrs.getString("encode");
+            this._ua     = attrs.getString("ua");
 
             //book,section 特有
-            //this.accept = cfg.getAttribute("accept");
-            this.header = cfg.getAttribute("header");
-            if(this.header == null)
-                this.header="";
+            this.header = attrs.getString("header","");
 
-            String w = cfg.getAttribute("w");
-            if(TextUtils.isEmpty(w)==false){
-                String h = cfg.getAttribute("h");
-                WHp = Float.parseFloat(w)/ Float.parseFloat(h);
-            }
+            this.buildArgs = attrs.getString("buildArgs");
+            this.buildRef  = attrs.getString("buildRef");
+            this.buildUrl  = attrs.getString("buildUrl");
 
-            this.buildArgs = cfg.getAttribute("buildArgs");
-            this.buildRef  = cfg.getAttribute("buildRef");
-            this.buildUrl  = cfg.getAttribute("buildUrl");
-            this.buildWeb  = cfg.getAttribute("buildWeb");
+            this.args    = attrs.getString("args");
 
-            this.args    = cfg.getAttribute("args");
-
-            this.trySuffix  = cfg.getAttribute("trySuffix");
-
-            this.addCookie  = cfg.getAttribute("addCookie");
-            this.addKey     = cfg.getAttribute("addKey");
-            String _addPage = cfg.getAttribute("addPage");
-            if(TextUtils.isEmpty(_addPage)==false){
-                this.addPage = Integer.parseInt(_addPage);
-            }
-
-            String _dType = cfg.getAttribute("dtype");
-            if(TextUtils.isEmpty(_dType)==false){
-                this._dtype = Integer.parseInt(_dType);
-            }
-
-
+            this.addCookie  = attrs.getString("addCookie");
+            this.addKey     = attrs.getString("addKey");
+            this.addPage    = attrs.getInt("addPage");
 
             if (cfg.hasChildNodes()) {
                 _items = new ArrayList<SdNode>();
                 _adds  = new ArrayList<SdNode>();
                 _funs  = new HashMap<>();
+
                 NodeList list = cfg.getChildNodes();
                 for (int i=0,len=list.getLength(); i<len; i++){
                     Node n1 = list.item(i);
-                    if(n1.getNodeType()== Node.ELEMENT_NODE) {
+                    if(n1.getNodeType()==Node.ELEMENT_NODE) {
                         Element e1 = (Element)n1;
 
                         if(e1.getTagName().equals("item")) {
-                            SdNode temp = new SdNode(source).buildForItem(e1, this);
+                            SdNode temp = Util.createNode(source).buildForItem(e1, this);
                             _items.add(temp);
                         }
                         else if(e1.hasAttributes()){
-                            SdNode temp = new SdNode(source).buildForAdd(e1, this);
+                            SdNode temp = Util.createNode(source).buildForAdd(e1, this);
                             _adds.add(temp);
                         }else{
                             _funs.put(e1.getTagName(),e1.getTextContent());
@@ -339,43 +244,51 @@ public class SdNode implements ISdNode {
                 }
             }
         }
+
+        OnDidInit();
+
+        return this;
     }
-
-
 
     //item(继承父节点)
     private SdNode buildForItem(Element cfg, SdNode p) {
+        NamedNodeMap nnMap = cfg.getAttributes();
+        for(int i=0,len=nnMap.getLength(); i<len; i++) {
+            Node att = nnMap.item(i);
+            attrs.set(att.getNodeName(), att.getNodeValue());
+        }
+
         this.name    = p.name;
 
-        this.title   = cfg.getAttribute("title");//可能为null
-        this.url     = cfg.getAttribute("url");//
-        this.lib     = cfg.getAttribute("lib");
-        this.logo    = cfg.getAttribute("logo");
-        this.group   = cfg.getAttribute("group");
-        this._encode = cfg.getAttribute("encode");
-
-        String _dType = cfg.getAttribute("dtype");
-        if(TextUtils.isEmpty(_dType)==false){
-            this._dtype = Integer.parseInt(_dType);
-        }
+        this.title   = attrs.getString("title");//可能为null
+        this.group   = attrs.getString("group");
+        this.url     = attrs.getString("url");//
+        this.lib     = attrs.getString("lib");
+        this.logo    = attrs.getString("logo");
+        this._encode = attrs.getString("encode");
 
         return this;
     }
 
     //add (不继承父节点)
     private SdNode buildForAdd(Element cfg, SdNode p) { //add不能有自己独立的url //定义为同一个page的数据获取(可能需要多个ajax)
+        NamedNodeMap nnMap = cfg.getAttributes();
+        for(int i=0,len=nnMap.getLength(); i<len; i++) {
+            Node att = nnMap.item(i);
+            attrs.set(att.getNodeName(), att.getNodeValue());
+        }
+
         this.name = cfg.getTagName();//默认为标签名
 
-        this.method  = cfg.getAttribute("method");
-        //this.accept  = cfg.getAttribute("accept");
-        this._encode = cfg.getAttribute("encode");
-        this._ua     = cfg.getAttribute("ua");
+        this.method  = attrs.getString("method");
+        this._encode = attrs.getString("encode");
+        this._ua     = attrs.getString("ua");
 
         //--------
-        this.title    = cfg.getAttribute("title");//可能为null
-        this.parse    = cfg.getAttribute("parse");
-        this.buildUrl = cfg.getAttribute("buildUrl");
-        this.buildRef = cfg.getAttribute("buildRef");
+        this.title    = attrs.getString("title");//可能为null
+        this.parse    = attrs.getString("parse");
+        this.buildUrl = attrs.getString("buildUrl");
+        this.buildRef = attrs.getString("buildRef");
 
         return this;
     }

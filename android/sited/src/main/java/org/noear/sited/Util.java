@@ -1,7 +1,9 @@
 package org.noear.sited;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -13,6 +15,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import java.io.File;
 import java.io.StringReader;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
@@ -22,6 +25,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import cz.msebera.android.httpclient.Header;
+import cz.msebera.android.httpclient.client.entity.UrlEncodedFormEntity;
 
 
 /**
@@ -244,16 +248,29 @@ class Util {
     public static void log(SdSource source, String tag, String msg) {
         Log.v(tag, msg);
 
-        if (SdSource.logListener != null) {
-            SdSource.logListener.run(source, tag, msg, null);
+        if (SdApi._listener != null) {
+            SdApi._listener.run(source, tag, msg, null);
         }
     }
 
     public static void log(SdSource source, String tag, String msg, Throwable tr) {
         Log.v(tag, msg, tr);
 
-        if (SdSource.logListener != null) {
-            SdSource.logListener.run(source, tag, msg, tr);
+        if (SdApi._listener != null) {
+            SdApi._listener.run(source, tag, msg, tr);
         }
+    }
+    //-------------
+    //
+    public static SdNode createNode(SdSource source){
+        return SdApi._factory.createNode(source);
+    }
+    public static SdNodeSet createNodeSet(SdSource source)
+    {
+        return SdApi._factory.createNodeSet(source);
+    }
+    public static SdSource createSource(String xml) throws Exception
+    {
+        return SdApi._factory.createSource(xml);
     }
 }
