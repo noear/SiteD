@@ -59,7 +59,7 @@ public class SdNode implements ISdNode{
 
     //build
     protected String buildArgs;
-    public String buildUrl;
+    protected String buildUrl;
     protected String buildRef;//
 
     //add prop for search or tag
@@ -78,13 +78,6 @@ public class SdNode implements ISdNode{
         return _isEmpty;
     }
 
-    //是否有宏定义@key,@page
-    public boolean hasMacroDefine(){
-        if(url== null || url.indexOf('@')<0)
-            return false;
-        else
-            return true;
-    }
 
     //下属项目
     private List<SdNode> _items;
@@ -96,6 +89,15 @@ public class SdNode implements ISdNode{
     private List<SdNode> _adds;
     public List<SdNode> adds(){
         return _adds;
+    }
+
+
+    //是否有宏定义@key,@page
+    public boolean hasMacro(){
+        if(url== null || url.indexOf('@')<0)
+            return false;
+        else
+            return true;
     }
 
     public boolean isMatch(String url){

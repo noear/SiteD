@@ -65,6 +65,7 @@ public class DdNode extends SdNode {
     }
 
 
+
     public  String[] getSuffixUrl(String url) {
         if(trySuffix == null)
             trySuffix = attrs.getString("trySuffix");
@@ -80,6 +81,12 @@ public class DdNode extends SdNode {
             return urls;
         }
     }
+
+    //是否有分页
+    public boolean hasPaging(){
+        return hasMacro() || TextUtils.isEmpty(buildUrl)==false;
+    }
+
 
     public boolean isWebrun(){
         String run = attrs.getString("run");
