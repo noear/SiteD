@@ -1,5 +1,6 @@
 package org.noear.sited;
 
+import android.app.Application;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Handler;
@@ -35,6 +36,7 @@ class Util {
     protected static final String defUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240";
 
     protected static __ICache cache = null;
+
     protected static void tryInitCache(Context context) {
         if (cache == null) {
             cache = new __FileCache(context, "sited");
@@ -43,7 +45,7 @@ class Util {
 
     protected static Element getElement(Element n, String tag) {
         NodeList temp = n.getElementsByTagName(tag);
-        if(temp.getLength()>0)
+        if (temp.getLength() > 0)
             return (Element) (temp.item(0));
         else
             return null;
@@ -51,7 +53,7 @@ class Util {
 
     protected static String getElementVal(Element n, String tag) {
         NodeList temp = n.getElementsByTagName(tag);
-        if(temp.getLength()>0)
+        if (temp.getLength() > 0)
             return temp.item(0).getTextContent();
         else
             return null;
@@ -65,7 +67,7 @@ class Util {
         return dombuild.parse(new InputSource(sr)).getDocumentElement();
     }
 
-    protected static  int parseInt(String str) {
+    protected static int parseInt(String str) {
         if (TextUtils.isEmpty(str))
             return 0;
         else
@@ -87,12 +89,12 @@ class Util {
     protected static void http(SdSource source, boolean isUpdate, String url, Map<String, String> params, int tag, SdNode config, HttpCallback callback) {
         __CacheBlock block = null;
         String cacheKey2 = null;
-        if(params==null)
+        if (params == null)
             cacheKey2 = url;
-        else{
+        else {
             StringBuilder sb = new StringBuilder();
             sb.append(url);
-            for(String key : params.keySet()){
+            for (String key : params.keySet()) {
                 sb.append(key).append("=").append(params.get(key)).append(";");
             }
             cacheKey2 = sb.toString();
@@ -140,7 +142,7 @@ class Util {
             client.addHeader("Referer", source.buildReferer(config, url));
         }
 
-        if(TextUtils.isEmpty(config.header) == false) {
+        if (TextUtils.isEmpty(config.header) == false) {
             for (String kv : config.header.split(";")) {
                 String[] kv2 = kv.split("=");
                 if (kv2.length == 2) {
@@ -176,8 +178,8 @@ class Util {
         try {
             int idx = url.indexOf('#'); //去除hash，即#.*
             String url2 = null;
-            if(idx>0)
-                url2 = url.substring(0,idx);
+            if (idx > 0)
+                url2 = url.substring(0, idx);
             else
                 url2 = url;
 
@@ -260,17 +262,14 @@ class Util {
             SdApi._listener.run(source, tag, msg, tr);
         }
     }
+
     //-------------
     //
-    public static SdNode createNode(SdSource source){
+    public static SdNode createNode(SdSource source) {
         return SdApi._factory.createNode(source);
     }
-    public static SdNodeSet createNodeSet(SdSource source)
-    {
+
+    public static SdNodeSet createNodeSet(SdSource source) {
         return SdApi._factory.createNodeSet(source);
-    }
-    public static SdSource createSource(String xml) throws Exception
-    {
-        return SdApi._factory.createSource(xml);
     }
 }

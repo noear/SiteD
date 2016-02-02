@@ -9,6 +9,8 @@ import org.w3c.dom.NodeList;
 
 import java.net.URI;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -96,17 +98,15 @@ public class SdNode implements ISdNode{
         return _adds;
     }
 
-    //下属函数
-    private Map<String,String> _funs;
-    public String funs(String key)
-    {
-        if(_funs==null)
-            return null;
+    public boolean isMatch(String url){
+        if(TextUtils.isEmpty(expr)==false){
+            Pattern pattern = Pattern.compile(expr);
+            Matcher m = pattern.matcher(url);
 
-        if(_funs.containsKey(key))
-            return _funs.get(key);
-        else
-            return null;
+            return m.find();
+        }else {
+            return false;
+        }
     }
 
     public boolean isEquals(SdNode node)
@@ -222,7 +222,6 @@ public class SdNode implements ISdNode{
             if (cfg.hasChildNodes()) {
                 _items = new ArrayList<SdNode>();
                 _adds  = new ArrayList<SdNode>();
-                _funs  = new HashMap<>();
 
                 NodeList list = cfg.getChildNodes();
                 for (int i=0,len=list.getLength(); i<len; i++){
@@ -237,8 +236,8 @@ public class SdNode implements ISdNode{
                         else if(e1.hasAttributes()){
                             SdNode temp = Util.createNode(source).buildForAdd(e1, this);
                             _adds.add(temp);
-                        }else{
-                            _funs.put(e1.getTagName(),e1.getTextContent());
+                        }else {
+                            attrs.set(e1.getTagName(), e1.getTextContent());
                         }
                     }
                 }
@@ -250,7 +249,7 @@ public class SdNode implements ISdNode{
         return this;
     }
 
-    //item(继承父节点)
+    //item(不继承父节点)
     private SdNode buildForItem(Element cfg, SdNode p) {
         NamedNodeMap nnMap = cfg.getAttributes();
         for(int i=0,len=nnMap.getLength(); i<len; i++) {

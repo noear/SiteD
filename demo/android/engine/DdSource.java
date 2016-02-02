@@ -18,31 +18,48 @@ import me.noear.exts.Act1;
  */
 public class DdSource extends SdSource {
     public final int ver; //版本号
-    public final  int engine;//引擎版本号
-    public final  String sds; //插件平台服务
-    public final  boolean isPrivate;//是否为私密型插件
+    public final int engine;//引擎版本号
+    public final String sds; //插件平台服务
+    public final boolean isPrivate;//是否为私密型插件
 
-    public final  String logo;  //图标
-    public final  String author;
-    public final  String alert; //提醒（打开时跳出）
-    public final  String intro; //介绍
+    public final String logo;  //图标
+    public final String author;
+    public final String alert; //提醒（打开时跳出）
+    public final String intro; //介绍
     //---------------------------------------------------
     public final DdNodeSet main;
-    public final  DdNode hots;
-    public final  DdNode updates;
-    public final  DdNode search;
-    public final  DdNode tags;
-    public final  SdNodeSet home;
+    public final DdNode hots;
+    public final DdNode updates;
+    public final DdNode search;
+    public final DdNode tags;
+    public final SdNodeSet home;
 
-    public final  DdNode tag;
-    public final  DdNode book;
-    public final  DdNode section;
-
+    public final DdNode tag;
+    public final DdNode book;
+    public final DdNode section;
 
     public DdSource(Application app, String xml) throws Exception {
         super(app, xml);
 
-        main = (DdNodeSet)_main;
+        sds       = attrs.getString("sds");
+        isPrivate = attrs.getInt("private") > 0;
+        engine    = attrs.getInt("engine");
+        ver       = attrs.getInt("ver");
+
+        author    = attrs.getString("author");
+        intro     = attrs.getString("intro");
+        logo      = attrs.getString("logo");
+
+        if (engine > DdApi.version)
+            alert = "此插件需要更高版本引擎支持，否则会出错。建议升级！";
+        else
+            alert = attrs.getString("alert");
+
+        //
+        //---------------------
+        //
+
+        main = (DdNodeSet)getBody("main");
 
         home = (DdNodeSet) main.get("home");
 
@@ -60,22 +77,6 @@ public class DdSource extends SdSource {
             tag = tags;
         else
             tag = temp; //新版本增加的:tags负责获取tag列表；tag负责获取解析tag.url的数据
-        //
-        //---------------------
-        //
-        sds = attrs.getString("sds");
-        isPrivate = attrs.getInt("private") > 0;
-        engine = attrs.getInt("engine");
-        ver = attrs.getInt("ver");
-
-        author = attrs.getString("author");
-        intro = attrs.getString("intro");
-        logo = attrs.getString("logo");
-
-        if (engine > DdApi.version)
-            alert = "此插件需要更高版本引擎支持，否则会出错。建议升级！";
-        else
-            alert = attrs.getString("alert");
     }
 
     private String _FullTitle;

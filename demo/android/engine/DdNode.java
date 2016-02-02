@@ -12,10 +12,10 @@ public class DdNode extends SdNode {
     private  String trySuffix;
     private int _dtype;
     public int dtype(){
-        if(_dtype==0)
-            return ((DdSource)source).main.dtype;
-        else
+        if(_dtype>0)
             return _dtype;
+        else
+            return s().main.dtype();
     }
 
     public boolean showWeb=true;
@@ -27,13 +27,16 @@ public class DdNode extends SdNode {
         super(source);
     }
 
+    public DdSource s(){
+        return (DdSource)source;
+    }
+
     @Override
     public void OnDidInit() {
 
-        _dtype  = attrs.getInt("dtype");
+        _dtype   = attrs.getInt("dtype");
         showWeb = attrs.getInt("showWeb", 1) > 0;
         screen  = attrs.getString("screen");
-
 
         {
             String temp = attrs.getString("cache");
@@ -97,6 +100,6 @@ public class DdNode extends SdNode {
     }
 
     public String getWebOnloadCode(){
-        return this.funs("web_onload");
+        return attrs.getString("web_onload");
     }
 }

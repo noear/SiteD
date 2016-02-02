@@ -5,10 +5,10 @@ package org.noear.sited;
  */
 public class SdApi {
 
-    protected static ISdFactory _factory;
+    protected static SdNodeFactory _factory;
     protected static SdLogListener _listener;
 
-    public static void tryInit(ISdFactory factory, SdLogListener listener) {
+    public static void tryInit(SdNodeFactory factory, SdLogListener listener) {
         if (_factory == null)
             _factory = factory;
 

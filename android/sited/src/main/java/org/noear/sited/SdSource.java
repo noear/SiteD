@@ -35,11 +35,6 @@ public class SdSource {
     private final String _ua;
     public String ua(){if(TextUtils.isEmpty(_ua)){return Util.defUA;}else{ return _ua;}}
 
-    protected final SdNodeSet _main;//源main节点
-    protected final SdJscript jscript;
-
-    private final JsEngine js;//不能作为属性
-
     private String _cookies;
     public String cookies(){
         return _cookies;
@@ -51,17 +46,21 @@ public class SdSource {
     public void delCache(String key){
         Util.cache.delete(key);
     }
+    //-------------------------------
+
+    private final JsEngine js;//不能作为属性
+    protected final SdJscript jscript;
 
     //
     //--------------------------------
     //
+    private Element _root = null; //使用一次后不置为null
     public SdSource(Application app, String xml) throws Exception {
 
         Util.tryInitCache(app.getApplicationContext());
 
-        _main = Util.createNodeSet(this);
-
         Element root = Util.getXmlroot(xml);
+        _root = root;
 
         {
             NamedNodeMap temp = root.getAttributes();
@@ -88,22 +87,28 @@ public class SdSource {
 
         isDebug = attrs.getInt("debug") > 0;
 
-        title = attrs.getString("title");
-        expr = attrs.getString("expr");
-        url = attrs.getString("url");
+        title   = attrs.getString("title");
+        expr    = attrs.getString("expr");
+        url     = attrs.getString("url");
         url_md5 = Util.md5(url);
 
         _encode = attrs.getString("encode");
         _ua     = attrs.getString("ua");
 
-        jscript = new SdJscript(this, Util.getElement(root, "jscript"));
-
-        _main.buildForNode(Util.getElement(root, "main"));
-
         js = new JsEngine(app, this);
+        jscript = new SdJscript(this, Util.getElement(root, "jscript"));
         jscript.loadJs(app, js);
 
         OnDidInit();
+    }
+
+    protected SdNodeSet getBody(String name){
+        SdNodeSet temp = Util.createNodeSet(this);
+        temp.buildForNode(Util.getElement(_root, name));
+
+        _root = null;
+
+        return temp;
     }
 
     public void OnDidInit(){
@@ -114,26 +119,15 @@ public class SdSource {
     //
     //------------
     //
-    public boolean isMe(String url) {
-
+    public boolean isMatch(String url) {
         Pattern pattern = Pattern.compile(expr);
         Matcher m = pattern.matcher(url);
 
         return m.find();
     }
 
-    public boolean isNode(SdNode node, String url){
-        if(TextUtils.isEmpty(node.expr)==false){
-            Pattern pattern = Pattern.compile(node.expr);
-            Matcher m = pattern.matcher(url);
 
-            return m.find();
-        }else {
-            return false;
-        }
-    }
-
-    protected String callJs(SdNode config, String funAttr, String... args) {
+    public String callJs(SdNode config, String funAttr, String... args) {
         return js.callJs(config.attrs.getString(funAttr), args);
     }
     //-------------
