@@ -1,0 +1,13 @@
+platform :ios, "8.0"
+use_frameworks!
+
+workspace "xxxx"
+
+xcodeproj "sited/sited.xcodeproj"
+
+target:sited do
+    pod "STHTTPRequest", "~> 1.1"
+    pod "SWXMLHash", "~> 2.0.2"
+    pod "FMDB", "~> 2.5"
+    xcodeproj "sited/sited.xcodeproj"
+end
