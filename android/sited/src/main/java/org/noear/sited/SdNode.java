@@ -26,8 +26,20 @@ public class SdNode implements ISdNode{
 
     }
 
+    private int _dtype;
+    public int dtype(){
+        if(_dtype>0)
+            return _dtype;
+        else {
+            return source.body.dtype();
+        }
+    }
+
 
     public int nodeType(){return 1;}
+    public String nodeName(){return name;}
+    public SdNode nodeMatch(String url){return this;}
+
     public final SdAttributeList attrs = new SdAttributeList();
 
     //info
@@ -60,7 +72,7 @@ public class SdNode implements ISdNode{
     //build
     protected String buildArgs;
     protected String buildUrl;
-    protected String buildRef;//
+    protected String buildRef;
 
     //add prop for search or tag
     protected String addCookie; //需要添加的关键字
@@ -74,7 +86,8 @@ public class SdNode implements ISdNode{
     public final SdSource source;
 
     private boolean _isEmpty;
-    public boolean isEmpty(){
+    @Override
+    public boolean  isEmpty(){
         return _isEmpty;
     }
 
@@ -173,6 +186,11 @@ public class SdNode implements ISdNode{
     public String cookies(String uri) {
         String cookies = source.cookies();
 
+
+        if (attrs.contains("buildCookie")) {
+            cookies = source.callJs(this, "buildCookie", uri, (cookies == null ? "" : cookies));
+        }
+
         if (TextUtils.isEmpty(addCookie) == false) {
             if (TextUtils.isEmpty(cookies)) {
                 cookies = addCookie + "; Path=/; Domain=" + URI.create(uri).getHost();
@@ -197,6 +215,8 @@ public class SdNode implements ISdNode{
                 attrs.set(att.getNodeName(), att.getNodeValue());
             }
 
+            _dtype  = attrs.getInt("dtype");
+
             this.title   = attrs.getString("title");
             this.method  = attrs.getString("method","get");
             this.parse   = attrs.getString("parse");
@@ -215,11 +235,37 @@ public class SdNode implements ISdNode{
             this.buildRef  = attrs.getString("buildRef");
             this.buildUrl  = attrs.getString("buildUrl");
 
+
             this.args    = attrs.getString("args");
 
             this.addCookie  = attrs.getString("addCookie");
             this.addKey     = attrs.getString("addKey");
             this.addPage    = attrs.getInt("addPage");
+
+            {
+                String temp = attrs.getString("cache");
+                if (TextUtils.isEmpty(temp) == false) {
+                    int len = temp.length();
+                    if (len == 1) {
+                        cache = Integer.parseInt(temp);
+                    } else if (len > 1) {
+                        cache = Integer.parseInt(temp.substring(0, len - 1));
+
+                        String p = temp.substring(len - 1);
+                        switch (p) {
+                            case "d":
+                                cache = cache * 24 * 60 * 60;
+                                break;
+                            case "h":
+                                cache = cache * 60 * 60;
+                                break;
+                            case "m":
+                                cache = cache * 60;
+                                break;
+                        }
+                    }
+                }
+            }
 
             if (cfg.hasChildNodes()) {
                 _items = new ArrayList<SdNode>();
@@ -281,7 +327,9 @@ public class SdNode implements ISdNode{
 
         this.name = cfg.getTagName();//默认为标签名
 
+        this.url     = attrs.getString("url");
         this.method  = attrs.getString("method");
+        this.header  = attrs.getString("header");
         this._encode = attrs.getString("encode");
         this._ua     = attrs.getString("ua");
 
@@ -290,6 +338,7 @@ public class SdNode implements ISdNode{
         this.parse    = attrs.getString("parse");
         this.buildUrl = attrs.getString("buildUrl");
         this.buildRef = attrs.getString("buildRef");
+
 
         return this;
     }

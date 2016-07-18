@@ -1,2 +1,2 @@
 
-.sited.xml
+.sited

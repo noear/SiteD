@@ -33,6 +33,7 @@ class JsEngine {
                 }
             }
         };
+
         engine.registerJavaMethod(callback, "print");
     }
 

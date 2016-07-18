@@ -9,11 +9,8 @@ public class SdApi {
     protected static SdLogListener _listener;
 
     public static void tryInit(SdNodeFactory factory, SdLogListener listener) {
-        if (_factory == null)
-            _factory = factory;
-
-        if (_listener == null)
-            _listener = listener;
+        _factory = factory;
+        _listener = listener;
     }
 
     protected static void check() throws Exception {

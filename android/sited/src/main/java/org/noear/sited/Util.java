@@ -1,5 +1,6 @@
 package org.noear.sited;
 
+import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -51,27 +52,12 @@ class Util {
             return null;
     }
 
-    protected static String getElementVal(Element n, String tag) {
-        NodeList temp = n.getElementsByTagName(tag);
-        if (temp.getLength() > 0)
-            return temp.item(0).getTextContent();
-        else
-            return null;
-    }
-
     protected static Element getXmlroot(String xml) throws Exception {
         StringReader sr = new StringReader(xml);
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dombuild = factory.newDocumentBuilder();
 
         return dombuild.parse(new InputSource(sr)).getDocumentElement();
-    }
-
-    protected static int parseInt(String str) {
-        if (TextUtils.isEmpty(str))
-            return 0;
-        else
-            return Integer.parseInt(str);
     }
 
     //
@@ -87,7 +73,11 @@ class Util {
     }
 
     protected static void http(SdSource source, boolean isUpdate, String url, Map<String, String> params, int tag, SdNode config, HttpCallback callback) {
+
+        log(source,"Util.http", url);
+
         __CacheBlock block = null;
+
         String cacheKey2 = null;
         if (params == null)
             cacheKey2 = url;
@@ -101,6 +91,7 @@ class Util {
         }
         final String cacheKey = cacheKey2;
 
+
         if (isUpdate == false && config.cache > 0) {
             block = cache.get(cacheKey);
         }
@@ -110,7 +101,7 @@ class Util {
                 final __CacheBlock block1 = block;
 
                 new Handler().postDelayed(() -> {
-                    Log.v("Util.incache.url", url);
+                    log(source,"Util.incache.url", url);
                     callback.run(1, tag, block1.value);
                 }, 100);
                 return;
@@ -128,7 +119,7 @@ class Util {
 
     private static void doHttp(SdSource source, String url, Map<String, String> params, int tag, SdNode config, __CacheBlock cache, HttpCallback callback) {
         AsyncHttpClient client = new AsyncHttpClient();
-        client.setUserAgent(source.ua());
+        client.setUserAgent(config.ua());
         client.setURLEncodingEnabled(url.indexOf(" ") > 0);
 
         if (config.isInCookie()) {
