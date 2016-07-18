@@ -11,12 +11,23 @@ namespace org.noear.sited {
     public sealed class JsEngine
     {
         private ChakraHost engine = null;
+        private SdSource source = null;
 
-        public JsEngine() {
+        public JsEngine(SdSource s) {
+            source = s;
             engine = new ChakraHost();
+
+            //if (s != null) {
+            //    engine.RegisterFunction("print", (args) =>
+            //    {
+            //        if (args.Length > 0) {
+            //            Util.log(source, "JsEngine.print", args[0].ConvertToString().ToString());
+            //        }
+            //    });
+            //}
         }
 
-        public JsEngine loadJs(SdSource source, string funs)
+        public JsEngine loadJs(string funs)
         {
             try
             {
@@ -33,7 +44,7 @@ namespace org.noear.sited {
 
 
         //调用函数
-        public string callJs(SdSource source, string fun, params object[] args)
+        public string callJs(string fun, params object[] args)
         {
             try
             {

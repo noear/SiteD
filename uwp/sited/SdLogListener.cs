@@ -6,5 +6,7 @@ using System.Threading.Tasks;
 
 namespace org.noear.sited
 {
-    public delegate void SdLogListener(SdSource source, String tag, String msg, Exception tr);
+    public interface SdLogListener {
+        void run(SdSource source, String tag, String msg, Exception tr);
+    }
 }

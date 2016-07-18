@@ -17,13 +17,14 @@ namespace ChakraBridge
 
         public ChakraHost()
         {
-            if (Native.JsCreateRuntime(JavaScriptRuntimeAttributes.None, null, out runtime) !=
-                JavaScriptErrorCode.NoError)
+            var code = Native.JsCreateRuntime(JavaScriptRuntimeAttributes.None, null, out runtime);
+            if ( code!= JavaScriptErrorCode.NoError)
             {
                 throw new Exception("failed to create runtime.");
             }
 
-            if (Native.JsCreateContext(runtime, out context) != JavaScriptErrorCode.NoError)
+            code = Native.JsCreateContext(runtime, out context);
+            if (code != JavaScriptErrorCode.NoError)
                 throw new Exception("failed to create execution context.");
 
             ResetContext();
@@ -35,19 +36,26 @@ namespace ChakraBridge
                     promiseCallback = task;
                 };
 
-            if (Native.JsSetPromiseContinuationCallback(promiseContinuationCallback, IntPtr.Zero) !=
-                JavaScriptErrorCode.NoError)
+            code = Native.JsSetPromiseContinuationCallback(promiseContinuationCallback, IntPtr.Zero);
+            if (code!=JavaScriptErrorCode.NoError)
                 throw new Exception("failed to setup callback for ES6 Promise");
-            
+
             // Projections
-            if (Native.JsProjectWinRTNamespace("ChakraBridge") != JavaScriptErrorCode.NoError)
+            code = Native.JsProjectWinRTNamespace("ChakraBridge");
+            if (code != JavaScriptErrorCode.NoError)
                 throw new Exception("failed to project ChakraBridge namespace.");
 
-//#if DEBUG
-//            // Debug
-//            if (Native.JsStartDebugging() != JavaScriptErrorCode.NoError)
-//                throw new Exception("failed to start debugging.");
-//#endif
+
+
+            //SetTimeoutJavaScriptNativeFunction = SetTimeout.SetTimeoutJavaScriptNativeFunction;
+            //DefineHostCallback("setTimeout", SetTimeoutJavaScriptNativeFunction);
+            //ProjectObjectToGlobal(new Console(), "console");
+
+            //#if DEBUG
+            //            // Debug
+            //            if (Native.JsStartDebugging() != JavaScriptErrorCode.NoError)
+            //                throw new Exception("failed to start debugging.");
+            //#endif
         }
 
         private void ResetContext() {
@@ -118,7 +126,7 @@ namespace ChakraBridge
             return Marshal.PtrToStringUni(returnValue);
         }
 
-        public string ProjectObjectToGlobal(object objectToProject, string name)
+        public string ProjectObjectToGlobal(string name, object objectToProject)
         {
             ResetContext();
 
@@ -130,6 +138,7 @@ namespace ChakraBridge
 
             return "NoError";
         }
+        
 
         public JavaScriptValue CallFunction(string name, params object[] parameters)
         {
@@ -172,6 +181,16 @@ namespace ChakraBridge
             // call function
             return function.CallFunction(javascriptParameters.ToArray());
         }
+
+        public void RegisterFunction(string function, Action<JavaScriptValue[]> callback) {
+            ResetContext();
+            
+            DefineHostCallback(function,(callee, isConstructCall,arguments, argumentCount, callbackData)=> {
+                callback(arguments);
+                return JavaScriptValue.True;
+            });
+        }
+        
 
         // Private tools
         private static void DefineHostCallback(string callbackName, JavaScriptNativeFunction callback)

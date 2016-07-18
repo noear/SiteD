@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Security.Cryptography;
@@ -9,10 +8,9 @@ using Windows.Security.Cryptography.Core;
 using Windows.Storage.Streams;
 
 using Noear.UWP.Http;
-using Windows.Web.Http;
+using System.Net;
 
-namespace org.noear.sited
-{
+namespace org.noear.sited {
     internal class Util
     {
         internal static __ICache cache = null;
@@ -24,13 +22,23 @@ namespace org.noear.sited
 
         public const String defUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240";
 
-       
+        public static int parseInt(String str) {
+            if (string.IsNullOrEmpty(str))
+                return 0;
+            else
+                return int.Parse(str);
+        }
+
+        //----------
 
         public static String urlEncode(String str, SdNode config)
         {
             try
             {
-                return Uri.EscapeUriString(str);
+                if(config.encode().ToLower() == "utf-8")
+                    return Uri.EscapeUriString(str);
+                else
+                    return __Escape.JsEscape(str);
             }
             catch (Exception)
             {
@@ -38,59 +46,89 @@ namespace org.noear.sited
             }
         }
 
-        public async static void http(SdSource source, bool isUpdate, String url, Dictionary<String, String> args, SdNode config, HttpCallback callback) {
+       
+
+        public async static void http(SdSource source, bool isUpdate, String url, Dictionary<String, String> args, int tag, SdNode config, HttpCallback callback) {
             __CacheBlock block = null;
+            String cacheKey = null;
+            if (args == null)
+                cacheKey = url;
+            else {
+                StringBuilder sb = new StringBuilder();
+                sb.Append(url);
+                foreach (String key in args.Keys) {
+                    sb.Append(key).Append("=").Append(args[key]).Append(";");
+                }
+                cacheKey = sb.ToString();
+            }
+
             if (isUpdate == false && config.cache > 0) {
-                block = cache.get(url);
+                block = await cache.get(cacheKey);
             }
 
             if (block != null) {
                 if (config.cache == 1 || block.seconds() <= config.cache) {
                     await Task.Delay(100);
-                    callback(1, block.value);
+                    callback(1, tag, block.value);
                     return;
                 }
             }
 
-            doHttp(source, url, args, config, block,(code, data) => {
+            doHttp(source, url, args, tag, config, block, async (code, tag2, data) =>
+            {
                 if (code == 1 && config.cache > 0) {
-                    cache.save(url, data);
+                    await cache.save(cacheKey, data);
                 }
 
-                callback(code, data);
+                callback(code, tag2, data);
             });
         }
 
-        private static async void doHttp(SdSource source, String url, Dictionary<String, String> args, SdNode config, __CacheBlock cache, HttpCallback callback) {
-
-
+        private static async void doHttp(SdSource source, String url, Dictionary<String, String> args, int tag, SdNode config, __CacheBlock cache, HttpCallback callback) {
             var encoding = Encoding.GetEncoding(config.encode());
 
             AsyncHttpClient client = new AsyncHttpClient();
+            client.UserAgent(config.ua());
+            client.Encoding(config.encode());
 
-            if (config.isInCookie() && string.IsNullOrEmpty(source.cookies()) == false) {
-                client.Cookies(source.cookies());
+            if (config.isInCookie()) {
+                String cookies = config.cookies(url);
+                if (cookies != null) {
+                    client.Cookies(cookies);
+                }
+            }
+            
+
+         
+
+            if (config.isInReferer()) {
+                client.Referer(source.buildReferer(config, url));
             }
 
-            client.Header("User-Agent", source.ua());
-            client.Encoding(config.encode());
+            if (string.IsNullOrEmpty(config.header) == false) {
+                foreach (String kv in config.header.Split(';')) {
+                    String[] kv2 = kv.Split('=');
+                    if (kv2.Length == 2) {
+                        client.Header(kv2[0], kv2[1]);
+                    }
+                }
+            }
 
             string newUrl = null;
             if (url.IndexOf(" ") >= 0)
                 newUrl = Uri.EscapeUriString(url);
             else
                 newUrl = url;
+            {
+                int idx = newUrl.IndexOf('#'); //去除hash，即#.*
+                String url2 = null;
+                if (idx > 0)
+                    url2 = newUrl.Substring(0, idx);
+                else
+                    url2 = url;
 
-            if (config.isInReferer()) {
-                client.Header("Referer", source.buildReferer(config, url));
+                client.Url(url2);
             }
-
-            if (string.IsNullOrEmpty(config.accept) == false) {
-                client.Header("Accept", config.accept);
-                client.Header("X-Requested-With", "XMLHttpRequest");
-            }
-
-            client.Url(newUrl);
 
             string temp = null;
 
@@ -101,7 +139,7 @@ namespace org.noear.sited
                 else
                     rsp = await client.Get();
 
-                if (rsp.StatusCode == HttpStatusCode.Ok) {
+                if (rsp.StatusCode == HttpStatusCode.OK) {
                     source.setCookies(rsp.Cookies);
                     temp = rsp.GetString();
                 }
@@ -112,12 +150,12 @@ namespace org.noear.sited
 
             if (temp == null) {
                 if (cache == null)
-                    callback(-2, null);
+                    callback(-2,tag, null);
                 else
-                    callback(1, cache.value);
+                    callback(1,tag, cache.value);
             }
             else
-                callback(1, temp);
+                callback(1,tag, temp);
         }
         
         public static String md5(String code)
@@ -146,13 +184,13 @@ namespace org.noear.sited
                 log(source, node.name, json);
         }
 
-        private static void log(SdSource source, String tag, String msg)
+        public static void log(SdSource source, String tag, String msg)
         {
             Debug.WriteLine(msg, tag);
 
-            if (SdSource.logListener != null)
+            if (SdApi._listener != null)
             {
-                SdSource.logListener(source, tag, msg, null);
+                SdApi._listener.run(source, tag, msg, null);
             }
         }
 
@@ -160,10 +198,20 @@ namespace org.noear.sited
         {
             Debug.WriteLine(msg, tag);
 
-            if (SdSource.logListener != null)
+            if (SdApi._listener != null)
             {
-                SdSource.logListener(source, tag, msg, tr);
+                SdApi._listener.run(source, tag, msg, tr);
             }
+        }
+
+        //-------------
+        //
+        public static SdNode createNode(SdSource source) {
+            return SdApi._factory.createNode(source);
+        }
+
+        public static SdNodeSet createNodeSet(SdSource source) {
+            return SdApi._factory.createNodeSet(source);
         }
     }
 }

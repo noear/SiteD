@@ -1,9 +1,32 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace org.noear.sited {
     public class SdNode : ISdNode {
+
+        public SdNode(SdSource source) {
+            this.source = source;
+        }
+
+        protected virtual void OnDidInit() {
+
+        }
+
+        private int _dtype;
+        public int dtype() {
+            if (_dtype > 0)
+                return _dtype;
+            else {
+                return source.body.dtype();
+            }
+        }
+
         public int nodeType() { return 1; }
+        public String nodeName() { return name; }
+        public SdNode nodeMatch(String url) { return this; }
+        public SdAttributeList attrs = new SdAttributeList();
 
         //info
         public string name { get; private set; } //节点名称
@@ -13,15 +36,19 @@ namespace org.noear.sited {
         public string expr { get; private set; }
         public string group { get;  set; }
 
+        internal String lib;
+
+        
+
         //http
         public string header { get; private set; }  //http header 头需求: cookies|accept
         internal string method { get; private set; }//http method
-        internal string accept { get; private set; }//http accept
 
         private string _encode;   //http 编码
         private string _ua;     //http ua
-        private string _run;
 
+        
+        public string jsTag ="";//传递给js函数的扩展参数
 
         //cache
         internal int cache = 1;//单位为秒(0不缓存；1不限时间)
@@ -31,30 +58,25 @@ namespace org.noear.sited {
         internal string parseUrl; //解析出真正在请求的Url
 
         //build
-        internal string buildUrl;
-        internal string buildKey;
-        internal string buildRef;//
-        internal string buildWeb;
+        protected internal string buildArgs;
+        protected internal string buildUrl;
+        protected internal string buildRef;//
+        //protected internal String buildHeader;
+        protected String buildCookies;
 
         //add prop for search or tag
+        internal string addCookie; //需要添加的关键字
         internal string addKey; //需要添加的关键字
         internal int addPage;//需要添加的页数值
 
         //ext prop (for post)
         public string args;
-
-        //宽高比例
-        public float WHp { get; private set; }
-
+        
         public  SdSource source { get; private set; }
 
         private bool _isEmpty;
         public bool isEmpty() {
             return _isEmpty;
-        }
-
-        public bool isWebrun() {
-            return "web".Equals(_run);
         }
 
         //下属项目
@@ -68,6 +90,25 @@ namespace org.noear.sited {
         public IList<SdNode> adds() {
             return _adds;
         }
+
+
+        //是否有宏定义@key,@page
+        public bool hasMacro() {
+            if (url == null || url.IndexOf('@') < 0)
+                return false;
+            else
+                return true;
+        }
+
+        public bool isMatch(String url) {
+            if (string.IsNullOrEmpty(expr) == false) {
+                return Regex.IsMatch(url, expr);
+            }
+            else {
+                return false;
+            }
+        }
+
 
         public bool isEquals(SdNode node) {
             if (name == null)
@@ -113,45 +154,80 @@ namespace org.noear.sited {
 
         public string encode() {
             if (string.IsNullOrEmpty(_encode))
-                return source.encode;
+                return source.encode();
             else
                 return _encode;
         }
 
+        
 
         //获取referer url
-        public string referer(string url) {
-            return source.buildReferer(this, url);
+        public string referer(string uri) {
+            return source.buildReferer(this, uri);
         }
 
         //获取cookies
-        public string cookies() {
-            return source.cookies();
+        public string cookies(string uri) {
+            var cookies = source.cookies();
+
+            if (string.IsNullOrEmpty(buildCookies) == false) {
+                cookies = source.callJs(this, "buildCookies", uri, (cookies == null ? "" : cookies));
+            }
+
+            if (string.IsNullOrEmpty(addCookie) == false) {
+                if (string.IsNullOrEmpty(cookies)) {
+                    cookies = addCookie + "; Path=/; Domain=" + new Uri(uri).Host;
+                }
+                else {
+                    cookies = addCookie + "; " + cookies;
+                }
+            }
+
+            return cookies;
         }
 
         public SdNode() {
+            this.source = null;
         }
 
-        public SdNode(SdSource source, XElement cfg) {
-            this.source = source;
+        
+
+        internal SdNode buildForNode(XElement cfg) {
             _isEmpty = (cfg == null);
 
             if (cfg != null) {
                 this.name = cfg.Name.LocalName;
 
-                this.title = cfg.Attribute("title")?.Value;
-                this.method = cfg.Attribute("method")?.Value;
-                this.parse = cfg.Attribute("parse")?.Value;
-                this.parseUrl = cfg.Attribute("parseUrl")?.Value;
-                this.url = cfg.Attribute("url")?.Value;
-                this.expr = cfg.Attribute("expr")?.Value;
-                this._run = cfg.Attribute("run")?.Value;
-                this._encode = cfg.Attribute("encode")?.Value;
-                this._ua = cfg.Attribute("ua")?.Value;
-
-                if (string.IsNullOrEmpty(this.method)) {
-                    this.method = "get";
+                foreach(XAttribute att in cfg.Attributes()) {
+                    attrs.set(att.Name.LocalName, att.Value);
                 }
+
+                _dtype = attrs.getInt("dtype");
+
+                this.title = attrs.getString("title");
+                this.method = attrs.getString("method", "get");
+                this.parse = attrs.getString("parse");
+                this.parseUrl = attrs.getString("parseUrl");
+                this.url = attrs.getString("url");
+                this.lib = attrs.getString("lib");
+                this.expr = attrs.getString("expr");
+
+                this._encode = attrs.getString("encode");
+                this._ua = attrs.getString("ua");
+
+                //book,section 特有
+                this.header = attrs.getString("header", "");
+
+                this.buildArgs = attrs.getString("buildArgs");
+                this.buildRef = attrs.getString("buildRef");
+                this.buildUrl = attrs.getString("buildUrl");
+                this.buildCookies = attrs.getString("buildCookies");
+
+                this.args = attrs.getString("args");
+
+                this.addCookie = attrs.getString("addCookie");
+                this.addKey = attrs.getString("addKey");
+                this.addPage = attrs.getInt("addPage");
 
                 {
                     string temp = cfg.Attribute("cache")?.Value;
@@ -173,30 +249,7 @@ namespace org.noear.sited {
                     }
                 }
 
-                this.accept = cfg.Attribute("accept")?.Value;
-                this.header = cfg.Attribute("header")?.Value;
-                if (this.header == null)
-                    this.header = "";
-
-                string w = cfg.Attribute("w")?.Value;
-                if (string.IsNullOrEmpty(w) == false) {
-                    string h = cfg.Attribute("h")?.Value;
-                    WHp = float.Parse(w) / float.Parse(h);
-                }
-
-                this.buildRef = cfg.Attribute("buildRef")?.Value;
-                this.buildUrl = cfg.Attribute("buildUrl")?.Value;
-                this.buildKey = cfg.Attribute("buildKey")?.Value;
-                this.buildWeb = cfg.Attribute("buildWeb")?.Value;
-
-                this.addKey = cfg.Attribute("addKey")?.Value;
-                string _addPage = cfg.Attribute("addPage")?.Value;
-                if (string.IsNullOrEmpty(_addPage) == false) {
-                    this.addPage = int.Parse(_addPage);
-                }
-
-                //搜索物有
-                this.args = cfg.Attribute("args")?.Value;
+                
 
                 if (cfg.HasElements) {
                     _items = new List<SdNode>();
@@ -204,49 +257,66 @@ namespace org.noear.sited {
 
                     foreach (XElement e1 in cfg.Elements()) {
                         if (e1.Name.LocalName.Equals("item")) {
-                            SdNode temp = new SdNode(source).buildForItem(e1, this);
+                            SdNode temp = Util.createNode(source).buildForItem(e1, this);
                             _items.Add(temp);
                         }
-                        else {
-                            SdNode temp = new SdNode(source).buildForAdd(e1, this);
+                        else if (e1.HasAttributes) {
+                            SdNode temp = Util.createNode(source).buildForAdd(e1, this);
                             _adds.Add(temp);
+                        }
+                        else {
+                            attrs.set(e1.Name.LocalName, e1.Value);
                         }
                     }
                 }
             }
+
+            OnDidInit();
+
+            return this;
         }
 
-        private SdNode(SdSource source) {
-            this.source = source;
-        }
+        
 
         //item(继承父节点)
         private SdNode buildForItem(XElement cfg, SdNode p) {
+            foreach(var att in cfg.Attributes()) {
+                attrs.set(att.Name.LocalName, att.Value);
+            }
             this.name = p.name;
 
-            this.title   = cfg.Attribute("title")?.Value;//可能为null
-            this.url     = cfg.Attribute("url")?.Value;//
-            this.logo    = cfg.Attribute("logo")?.Value;
-            this.group   = cfg.Attribute("group")?.Value;
-            this._encode = cfg.Attribute("encode")?.Value;
+            this.title = attrs.getString("title");//可能为null
+            this.group = attrs.getString("group");
+            this.url   = attrs.getString("url");//
+            this.lib   = attrs.getString("lib");
+            this.logo  = attrs.getString("logo");
+            this._encode = attrs.getString("encode");
+            
 
             return this;
         }
 
         //add (不继承父节点)
         private SdNode buildForAdd(XElement cfg, SdNode p) { //add不能有自己独立的url //定义为同一个page的数据获取(可能需要多个ajax)
+            foreach (var att in cfg.Attributes()) {
+                attrs.set(att.Name.LocalName, att.Value);
+            }
+
             this.name = cfg.Name.LocalName;//默认为标签名
 
-            this.method = cfg.Attribute("method")?.Value;
-            this.accept = cfg.Attribute("accept")?.Value;
-            this._encode = cfg.Attribute("encode")?.Value;
-            this._ua = cfg.Attribute("ua")?.Value;
+            this.url = attrs.getString("url");
+            this.method = attrs.getString("method");
+            this.header = attrs.getString("header");
+            this._encode = attrs.getString("encode");
+            this._ua = attrs.getString("ua");
 
             //--------
-            this.title = cfg.Attribute("title")?.Value;//可能为null
-            this.parse = cfg.Attribute("parse")?.Value;
-            this.buildUrl = cfg.Attribute("buildUrl")?.Value;
-            this.buildRef = cfg.Attribute("buildRef")?.Value;
+            this.title = attrs.getString("title");//可能为null
+            this.parse = attrs.getString("parse");
+            this.buildUrl = attrs.getString("buildUrl");
+            this.buildRef = attrs.getString("buildRef");
+
+            this.buildCookies = attrs.getString("buildCookies");
 
             return this;
         }

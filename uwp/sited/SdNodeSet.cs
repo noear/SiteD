@@ -4,52 +4,97 @@ using System.Xml.Linq;
 
 namespace org.noear.sited {
     public class SdNodeSet : ISdNode{
+        
+
+        List<ISdNode> _items = new List<ISdNode>();
+        public readonly SdSource source;
+
+        //---------------
+
+        public SdNodeSet(SdSource source) {
+            this.source = source;
+        }
+
+        public virtual void OnDidInit() {
+
+        }
+
+        private int _dtype = 0;
+        public int dtype() {
+            if (_dtype > 0)
+                return _dtype;
+            else
+                return 1;
+        }//数据类型
+
         public int nodeType() { return 2; }
-
-        Dictionary<String, ISdNode> _items;
-        SdSource _source;
-
-        internal SdNodeSet(SdSource source) {
-            _items = new Dictionary<string, ISdNode>();
-            _source = source;
+        public String nodeName() { return name; }
+        public bool isEmpty() {
+            return _items.Count == 0;
         }
 
-        internal SdNodeSet(SdSource source, XElement element) :this(source){
-           
-            loadByElement(element);
-        }
+        public String name;
+        public readonly SdAttributeList attrs = new SdAttributeList();
 
-        internal void loadByElement(XElement element) {
+        internal SdNodeSet buildForNode(XElement element) {
             if (element == null)
-                return;
+                return this;
+
+            name = element.Name.LocalName;
 
             _items.Clear();
+            attrs.clear();
+
+            {
+                foreach (var p in element.Attributes()) {
+                    attrs.set(p.Name.LocalName, p.Value);
+                }
+            }
+
+            _dtype = attrs.getInt("dtype");
 
             foreach (XElement e1 in element.Elements()) {
                 if (e1.HasAttributes) {
-                    SdNode temp = new SdNode(_source, e1);
-                    this.add(e1.Name.LocalName, temp);
+                    SdNode temp = Util.createNode(source).buildForNode(e1);
+                    this.add(temp);
                 }
                 else {
-                    SdNodeSet temp = new SdNodeSet(_source, e1);
-                    this.add(e1.Name.LocalName, temp);
+                    SdNodeSet temp = Util.createNodeSet(source).buildForNode(e1);
+                    this.add(temp);
                 }
             }
+
+            OnDidInit();
+
+            return this;
         }
 
         public IEnumerable<ISdNode> nodes() {
-            return _items.Values;
+            return _items;
         }
 
         public ISdNode get(String name) {
-            if (_items.ContainsKey(name))
-                return _items[name];
-            else
-                return new SdNode(_source, null);
+            foreach (ISdNode n in _items) {
+                if (name.Equals(n.nodeName()))
+                    return n;
+            }
+
+            return Util.createNode(source).buildForNode(null);
         }
 
-        internal void add(String name, ISdNode node) {
-            _items.Add(name, node);
+        public SdNode nodeMatch(String url) {
+            foreach (ISdNode n in nodes()) {
+                SdNode n1 = (SdNode)n;
+                if (n1.isMatch(url)) {
+                    return n1;
+                }
+            }
+
+            return Util.createNode(source).buildForNode(null);
+        }
+
+        internal void add(ISdNode node) {
+            _items.Add(node);
         }
     }
 }

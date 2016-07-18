@@ -11,7 +11,7 @@
     <AssemblyName>sited</AssemblyName>
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
-    <TargetPlatformVersion>10.0.10240.0</TargetPlatformVersion>
+    <TargetPlatformVersion>10.0.10586.0</TargetPlatformVersion>
     <TargetPlatformMinVersion>10.0.10240.0</TargetPlatformMinVersion>
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
@@ -119,6 +119,9 @@
     <Compile Include="ChakraBridge\Wrappers\JavaScriptPropertyId.cs" />
     <Compile Include="ChakraBridge\Wrappers\JavaScriptTypedef.cs" />
     <Compile Include="ChakraBridge\Wrappers\JavaScriptValue.cs" />
+    <Compile Include="Log.cs" />
+    <Compile Include="SdApi.cs" />
+    <Compile Include="SdAttributeList.cs" />
     <Compile Include="SdLogListener.cs" />
     <Compile Include="HttpCallback.cs" />
     <Compile Include="ISdNode.cs" />
@@ -127,20 +130,36 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SdJscript.cs" />
     <Compile Include="SdNode.cs" />
+    <Compile Include="SdNodeFactory.cs" />
     <Compile Include="SdNodeSet.cs" />
     <Compile Include="SdSource.cs" />
     <Compile Include="SdSourceCallback.cs" />
     <Compile Include="Util.cs" />
+    <Compile Include="__Escape.cs" />
     <Compile Include="__AsyncTag.cs" />
     <Compile Include="__CacheBlock.cs" />
     <Compile Include="__FileCache.cs" />
     <Compile Include="__ICache.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="AsyncHttpClient.UWP, Version=1.0.1.5, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\_libs\AsyncHttpClient.UWP.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\..\uwp-async-http\AsyncHttpClient.UWP\AsyncHttpClient.UWP\AsyncHttpClient.UWP.csproj">
+      <Project>{2fe8d0e9-d8a1-4e6b-a934-e62b3e0554e6}</Project>
+      <Name>AsyncHttpClient.UWP</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="raw\base64.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="raw\cheerio.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="raw\md5.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="raw\sha1.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
