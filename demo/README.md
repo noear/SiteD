@@ -14,7 +14,7 @@ source.getNodeViewModel(viewModel, source.home, isUpdate, (code) -> {
 TagViewModel viewModel = new TagViewModel();
 source.getNodeViewModel(viewModel, false, 1, tagUrl, source.tag(tagUrl), (code) -> {
     if (code == 1) {
-        listView.setAdapter(viewAdapter.bind(viewModel.resultList));
+        DoBindingView();
     }
 
 });
