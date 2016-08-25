@@ -12,9 +12,7 @@ source.getNodeViewModel(viewModel, source.home, isUpdate, (code) -> {
 
 //获取分类数据
 TagViewModel viewModel = new TagViewModel();
-tagConfig = source.tag(tagUrl);
-tagConfig.url = tagUrl;
-source.getNodeViewModel(viewModel, false, 1, tagConfig, (code) -> {
+source.getNodeViewModel(viewModel, false, 1, tagUrl, source.tag(tagUrl), (code) -> {
     if (code == 1) {
         listView.setAdapter(viewAdapter.bind(viewModel.resultList));
     }
