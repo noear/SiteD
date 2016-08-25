@@ -105,7 +105,7 @@ public class SdNodeSet implements ISdNode{
     }
 
     public SdNode nodeMatch(String url){
-        for(ISdNode n : nodes()){
+        for(ISdNode n : _items){
             SdNode n1 = (SdNode)n;
             if(n1.isMatch(url)) {
                 Log.v("nodeMatch.select",n1.expr);

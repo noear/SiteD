@@ -7,6 +7,7 @@ import android.util.Log;
 
 import org.noear.ddcat.Navigation;
 import org.noear.ddcat.controller.ActivityBase;
+import org.noear.ddcat.dao.Session;
 import org.noear.ddcat.dao.db.SiteDbApi;
 import org.noear.sited.ISdNode;
 import org.noear.sited.SdApi;
@@ -60,7 +61,7 @@ public class DdSource extends SdSource {
         return  (DdNode)_section.nodeMatch(url);
     }
 
-    public DdNode object(String url){
+    public DdNode object1(String url){
         Log.v("object.selct::",url);
 
         return  (DdNode)_object.nodeMatch(url);
@@ -132,8 +133,6 @@ public class DdSource extends SdSource {
 
 
         login = (DdNode) main.get("login");
-
-
     }
 
     private String _FullTitle;
@@ -155,40 +154,93 @@ public class DdSource extends SdSource {
 
     @Override
     public void setCookies(String cookies) {
-        super.setCookies(cookies);
+        if (cookies == null)
+            return;
 
-        SiteDbApi.setSourceCookies(this);
-    }
+        Log.v("cookies", cookies);
 
-    @Override
-    protected boolean DoCheck(String url, String html, String cookies) {
-        if(login.isEmpty()){
-            return true;
-        }else {
-            String temp = callJs(login, "check", url, html, cookies);
-
-            return temp.equals("1");
+        if (DoCheck("", cookies, false)) {
+            super.setCookies(cookies);
+            SiteDbApi.setSourceCookies(this);
         }
     }
 
-    public void tryLogin(ActivityBase activity, boolean isMust){
-        if(login.isEmpty())
-            return;
+    @Override
+    public String cookies() {
+        if (TextUtils.isEmpty(_cookies)) {
+            _cookies = SiteDbApi.getSourceCookies(this);
+        }
 
-        if(isMust){
-            login.dataTag=0;
-            doLogin(activity);
+        return _cookies;
+    }
+
+    public boolean isLoggedIn(String url, String cookies) {
+        return DoCheck(url, cookies, false);
+    }
+
+    @Override
+    protected boolean DoCheck(String url, String cookies, boolean isFromAuto) {
+        if(login.isEmpty()){
+            return true;
         }else {
-            if (login.dataTag == 0) {
-                login.dataTag = 1;
-                doLogin(activity);
+
+            if(TextUtils.isEmpty(login.check)){
+                return true;
+            }else {
+                if (url == null || cookies == null)
+                    return false;
+
+                if(isFromAuto){
+                    if(login.isAutoCheck){
+                        String temp = callJs(login, "check", url, cookies);
+                        return temp.equals("1");
+                    }else{
+                        return true;//如果不支持自动,则总是返回ok
+                    }
+                }
+                else {
+                    String temp = callJs(login, "check", url, cookies);
+                    return temp.equals("1");
+                }
             }
         }
     }
 
+    @Override
+    protected void DoTraceUrl(String url, String args, SdNode config) {
+        if (TextUtils.isEmpty(trace_url) == false) {
+            if (TextUtils.isEmpty(url) == false) {
+                try {
+                    HashMap<String, String> data = new HashMap<>();
+                    data.put("_uid", Session.userID + "");
+                    data.put("_uname", Session.nickname);
+                    data.put("_days", Session.dayNum + "");
+                    data.put("_vip", Session.isVip + "");
+
+                    data.put("url", url);
+                    data.put("args", args);
+                    data.put("node", config.name);
+
+                    HttpUtil.post(trace_url, data, (code, text) -> {
+                    });
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public synchronized void tryLogin(ActivityBase activity, boolean forUser) {
+        if (login.isEmpty())
+            return;
+
+        doLogin(activity);
+    }
+
     private void doLogin(ActivityBase activity){
         if(login.isWebrun()) {
-            Navigation.showWebOnly(activity, login.url);
+            String loginUrl = buildUrl(login,login.url);
+            Navigation.showWebAddinLogin(activity, this, loginUrl);
         }else{
 
         }
@@ -246,14 +298,4 @@ public class DdSource extends SdSource {
             return callJs(config, "buildWeb", url, config.jsTag);
     }
 
-    public void traceUrl(String url ,SdNode confg) {
-        if (TextUtils.isEmpty(trace_url) == false) {
-            HashMap<String, String> data = new HashMap<>();
-            data.put("url", url);
-            data.put("node", confg.name);
-
-            HttpUtil.post(trace_url, data, (code, text) -> {
-            });
-        }
-    }
 }

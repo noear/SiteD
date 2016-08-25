@@ -72,22 +72,24 @@ class Util {
         }
     }
 
-    protected static void http(SdSource source, boolean isUpdate, String url, Map<String, String> params, int tag, SdNode config, HttpCallback callback) {
+    protected static void http(SdSource source, boolean isUpdate, String url, Map<String, String> paramS, int tag, SdNode config, HttpCallback callback) {
 
-        log(source,"Util.http", url);
+        log(source, "Util.http", url);
 
         __CacheBlock block = null;
 
         String cacheKey2 = null;
-        if (params == null)
+        String args = "";
+        if (paramS == null)
             cacheKey2 = url;
         else {
             StringBuilder sb = new StringBuilder();
             sb.append(url);
-            for (String key : params.keySet()) {
-                sb.append(key).append("=").append(params.get(key)).append(";");
+            for (String key : paramS.keySet()) {
+                sb.append(key).append("=").append(paramS.get(key)).append(";");
             }
             cacheKey2 = sb.toString();
+            args = cacheKey2;
         }
         final String cacheKey = cacheKey2;
 
@@ -101,20 +103,22 @@ class Util {
                 final __CacheBlock block1 = block;
 
                 new Handler().postDelayed(() -> {
-                    log(source,"Util.incache.url", url);
+                    log(source, "Util.incache.url", url);
                     callback.run(1, tag, block1.value);
                 }, 100);
                 return;
             }
         }
 
-        doHttp(source, url, params, tag, config, block, (code, tag2, data) -> {
+        doHttp(source, url, paramS, tag, config, block, (code, tag2, data) -> {
             if (code == 1 && config.cache > 0) {
                 cache.save(cacheKey, data);
             }
 
             callback.run(code, tag2, data);
         });
+
+        source.DoTraceUrl(url, args, config);
     }
 
     private static void doHttp(SdSource source, String url, Map<String, String> params, int tag, SdNode config, __CacheBlock cache, HttpCallback callback) {

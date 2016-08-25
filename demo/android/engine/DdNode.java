@@ -24,7 +24,12 @@ public class DdNode extends SdNode {
     public String screen;
     //首页图片显示的宽高比例
     public float WHp = 0;
+    //是否循环播放
     public boolean loop = false;
+
+    //只应用于login节点
+    protected String check;
+    protected boolean isAutoCheck = true;
 
     public DdNode(SdSource source){
         super(source);
@@ -36,6 +41,10 @@ public class DdNode extends SdNode {
         screen  = attrs.getString("screen");
         loop    = attrs.getInt("loop", 0) > 0;
 
+        //只应用于login节点
+        check       = attrs.getString("check");
+        isAutoCheck = attrs.getInt("auto") > 0;
+
 
         String w = attrs.getString("w");
         if (TextUtils.isEmpty(w) == false) {
@@ -45,27 +54,9 @@ public class DdNode extends SdNode {
     }
 
 
-
-    private  String _trySuffix;
-    public  String[] getSuffixUrl(String url) {
-        if(_trySuffix == null)
-            _trySuffix = attrs.getString("trySuffix");
-
-        if (TextUtils.isEmpty(_trySuffix) || TextUtils.isEmpty(url))
-            return new String[]{url};
-        else {
-            String[] exts = _trySuffix.split("\\|");
-            String[] urls = new String[exts.length];
-            for (int i=0,len=exts.length; i<len; i++) {
-                urls[i] = url.replaceAll(_trySuffix, exts[i]);
-            }
-            return urls;
-        }
-    }
-
     //是否有分页
     public boolean hasPaging(){
-        return hasMacro() || TextUtils.isEmpty(buildUrl)==false;
+        return hasMacro() || TextUtils.isEmpty(buildUrl)==false || "post".equals(method);
     }
 
     //是否内部WEB运行
@@ -88,7 +79,4 @@ public class DdNode extends SdNode {
         return run.indexOf("outweb")>=0;
     }
 
-    public String getWebOnloadCode(){
-        return attrs.getString("web_onload");
-    }
 }

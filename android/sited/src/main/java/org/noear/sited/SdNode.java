@@ -91,7 +91,6 @@ public class SdNode implements ISdNode{
         return _isEmpty;
     }
 
-
     //下属项目
     private List<SdNode> _items;
     public List<SdNode> items(){

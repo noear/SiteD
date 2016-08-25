@@ -14,20 +14,19 @@ public class DdLogListener implements SdLogListener {
     @Override
     public void run(SdSource source, String tag, String msg, Throwable tr) {
         if(Setting.isDeveloperModel()) {
-            CallUtil.asynCall(1,()->{
-                LogWriter.tryInit();
 
-                LogWriter.loger.print(tag, msg, tr);
+            LogWriter.tryInit();
 
-                if("JsEngine.print".equals(tag)) {
-                    HintUtil.show(msg);
-                    LogWriter.jsprint.print(tag, msg, tr);
-                }
+            LogWriter.loger.print(tag, msg, tr);
 
-                if (tr != null) {
-                    LogWriter.error.print(source.url + "::\r\n" + tag, msg, null);
-                }
-            });
+            if ("JsEngine.print".equals(tag)) {
+                HintUtil.show(msg);
+                LogWriter.jsprint.print(tag, msg, tr);
+            }
+
+            if (tr != null) {
+                LogWriter.error.print(source.url + "::\r\n" + tag, msg, null);
+            }
         }
     }
 }
