@@ -10,9 +10,6 @@ source.getNodeViewModel(viewModel, source.home, isUpdate, (code) -> {
 
     HintUtil.hide(activity);
 
-    if(code == 99) {
-        source.tryLogin(activity, false);
-    }
 });
 
 //获取分类数据
@@ -25,9 +22,6 @@ source.getNodeViewModel(viewModel, false, 1, tagConfig, (code) -> {
 
     HintUtil.hide(activity);
 
-    if(code == 99) {
-        source.tryLogin(activity, false);
-    }
 });
 
 ```
