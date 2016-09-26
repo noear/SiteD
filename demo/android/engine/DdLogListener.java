@@ -1,8 +1,7 @@
 package org.noear.ddcat.dao.engine;
 
 import org.noear.ddcat.dao.Setting;
-import org.noear.ddcat.utils.CallUtil;
-import org.noear.ddcat.utils.HintUtil;
+import org.noear.ddcat.dao.HintUtil;
 import org.noear.ddcat.utils.LogWriter;
 import org.noear.sited.SdLogListener;
 import org.noear.sited.SdSource;
@@ -20,7 +19,8 @@ public class DdLogListener implements SdLogListener {
             LogWriter.loger.print(tag, msg, tr);
 
             if ("JsEngine.print".equals(tag)) {
-                HintUtil.show(msg);
+                //ok
+                HintUtil.show2(msg);
                 LogWriter.jsprint.print(tag, msg, tr);
             }
 

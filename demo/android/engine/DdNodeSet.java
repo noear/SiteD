@@ -15,6 +15,7 @@ public class DdNodeSet extends SdNodeSet {
 
 
 
+    public  String dtag;
     public  String durl;//数据url（url是给外面看的；durl是真实的地址）
     public  boolean showWeb;
 
@@ -27,5 +28,6 @@ public class DdNodeSet extends SdNodeSet {
     public void OnDidInit() {
         showWeb = attrs.getInt("showWeb", 1) > 0;
         durl    = attrs.getString("durl", source.url);
+        dtag    = attrs.getString("dtag");
     }
 }

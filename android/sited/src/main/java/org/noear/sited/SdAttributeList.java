@@ -12,6 +12,10 @@ public class SdAttributeList {
         _items  =new HashMap<>();
     }
 
+    public int count(){
+        return _items.size();
+    }
+
     public void clear(){
         _items.clear();
     }

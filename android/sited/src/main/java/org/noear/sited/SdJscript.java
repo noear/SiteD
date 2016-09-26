@@ -53,11 +53,14 @@ public class SdJscript {
                     n1.cache = 1; //长久缓存js文件 //默认长久缓存
                 }
 
-                Util.http(s, false, n1.url, null, 0, n1, (code, t, text) -> {
+                HttpMessage msg = new HttpMessage(n1,n1.url);
+                msg.callback = (code, sender, text, url302) -> {
                     if (code == 1) {
                         js.loadJs(text);
                     }
-                });
+                };
+
+                Util.http(s, false, msg);
             }
         }
 

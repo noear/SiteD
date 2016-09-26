@@ -8,6 +8,7 @@ import android.util.Log;
 import org.noear.ddcat.Navigation;
 import org.noear.ddcat.controller.ActivityBase;
 import org.noear.ddcat.dao.Session;
+import org.noear.ddcat.dao.db.DbApi;
 import org.noear.ddcat.dao.db.SiteDbApi;
 import org.noear.sited.ISdNode;
 import org.noear.sited.SdApi;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 
 import me.noear.exts.Act1;
 import me.noear.utils.HttpUtil;
+import noear.snacks.ONode;
 
 /**
  * Created by yuety on 15/8/3.
@@ -36,12 +38,14 @@ public class DdSource extends SdSource {
     public final String alert; //提醒（打开时跳出）
     public final String intro; //介绍
     //---------------------------------------------------
+    public final DdNode reward;
+    //---------------------------------------------------
     public final DdNodeSet main;
     public final DdNode hots;
     public final DdNode updates;
     public final DdNode search;
     public final DdNode tags;
-    public final SdNodeSet home;
+    public final DdNodeSet home;
 
     private  ISdNode _tag;
     private  ISdNode _book;
@@ -88,17 +92,17 @@ public class DdSource extends SdSource {
 
         doInit(app, xml, "main");
 
-        sds       = attrs.getString("sds");
+        sds = attrs.getString("sds");
         isPrivate = attrs.getInt("private") > 0;
-        engine    = attrs.getInt("engine");
-        ver       = attrs.getInt("ver");
-        vip       = attrs.getInt("vip");
+        engine = attrs.getInt("engine");
+        ver = attrs.getInt("ver");
+        vip = attrs.getInt("vip");
 
-        author    = attrs.getString("author");
-        intro     = attrs.getString("intro");
-        logo      = attrs.getString("logo");
+        author = attrs.getString("author");
+        intro = attrs.getString("intro");
+        logo = attrs.getString("logo");
 
-        if (engine > DdApi.version)
+        if (engine > DdApi.version())
             alert = "此插件需要更高版本引擎支持，否则会出错。建议升级！";
         else
             alert = attrs.getString("alert");
@@ -109,7 +113,6 @@ public class DdSource extends SdSource {
 
         main = (DdNodeSet) body;
         trace_url = main.attrs.getString("trace");
-
 
         home = (DdNodeSet) main.get("home");
 
@@ -124,15 +127,30 @@ public class DdSource extends SdSource {
         _section = main.get("section");
         _object = main.get("object");
 
-        if(_object.isEmpty()){
-            if(_section.isEmpty())
+        if (_object.isEmpty()) {
+            if (_section.isEmpty())
                 _object = _book;
             else
                 _object = _section;
         }
 
 
-        login = (DdNode) main.get("login");
+        login  = (DdNode) main.get("login");//登录
+        reward = (DdNode) main.get("reward");//打赏
+
+        //-----------
+        ONode json = new ONode();
+        json.set("ver", DdApi.version());
+        json.set("udid", Session.udid());
+
+        json.set("uid", Session.userID);
+        json.set("usex", Session.sex);
+        json.set("uvip", Session.isVip);
+        json.set("ulevel", Session.level);
+
+        String jsCode = "SiteD=" + json.toJson() + ";";
+
+        loadJs(jsCode);
     }
 
     private String _FullTitle;
@@ -239,7 +257,7 @@ public class DdSource extends SdSource {
 
     private void doLogin(ActivityBase activity){
         if(login.isWebrun()) {
-            String loginUrl = buildUrl(login,login.url);
+            String loginUrl = login.getUrl(login.url);
             Navigation.showWebAddinLogin(activity, this, loginUrl);
         }else{
 
@@ -290,12 +308,4 @@ public class DdSource extends SdSource {
             return true;
         }
     }
-
-    public String buildWeb(SdNode config,String url) {
-        if (config.attrs.contains("buildWeb")==false)
-            return url;
-        else
-            return callJs(config, "buildWeb", url, config.jsTag);
-    }
-
 }

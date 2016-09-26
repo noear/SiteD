@@ -17,6 +17,7 @@ public class DdNode extends SdNode {
     //临时数据寄存（任意）
     public int dataTag;
 
+    public String showImg;
 
     //是否显示S按钮
     public boolean showWeb=true;
@@ -31,20 +32,34 @@ public class DdNode extends SdNode {
     protected String check;
     protected boolean isAutoCheck = true;
 
+    public String mail;
+    public int style;
+
+    public static final int STYLE_VIDEO = 11;
+    public static final int STYLE_AUDIO = 12;
+
     public DdNode(SdSource source){
         super(source);
     }
 
     @Override
     public void OnDidInit() {
+        showImg = attrs.getString("showImg");
         showWeb = attrs.getInt("showWeb", 1) > 0;
         screen  = attrs.getString("screen");
         loop    = attrs.getInt("loop", 0) > 0;
 
         //只应用于login节点
-        check       = attrs.getString("check");
+        check = attrs.getString("check");
         isAutoCheck = attrs.getInt("auto") > 0;
 
+        mail  = attrs.getString("mail");
+
+        style = attrs.getInt("style", STYLE_VIDEO);
+
+        if(TextUtils.isEmpty(screen) && style == STYLE_AUDIO) {
+            screen = "v";
+        }
 
         String w = attrs.getString("w");
         if (TextUtils.isEmpty(w) == false) {
@@ -54,10 +69,7 @@ public class DdNode extends SdNode {
     }
 
 
-    //是否有分页
-    public boolean hasPaging(){
-        return hasMacro() || TextUtils.isEmpty(buildUrl)==false || "post".equals(method);
-    }
+
 
     //是否内部WEB运行
     public boolean isWebrun(){
@@ -79,4 +91,10 @@ public class DdNode extends SdNode {
         return run.indexOf("outweb")>=0;
     }
 
+    public String getWebUrl(String url) {
+        if (attrs.contains("buildWeb")==false)
+            return url;
+        else
+            return source.callJs(this, "buildWeb", url);
+    }
 }
