@@ -38,6 +38,13 @@ public class SdNodeSet implements ISdNode{
         else
             return 1;
     }//数据类型
+    private int _btype=0;
+    public int btype(){
+        if(_btype>0)
+            return _btype;
+        else
+            return dtype();
+    }
 
     public int nodeType(){return 2;}
     public String nodeName(){return name;}
@@ -47,7 +54,7 @@ public class SdNodeSet implements ISdNode{
     }
 
     public String name;
-    public final SdAttributeList attrs = new SdAttributeList();
+    public SdAttributeList attrs = new SdAttributeList();
 
 
     protected SdNodeSet buildForNode(Element element) {
@@ -67,6 +74,22 @@ public class SdNodeSet implements ISdNode{
             }
         }
 
+        {
+            NodeList temp = element.getChildNodes();
+            for (int i = 0, len = temp.getLength(); i < len; i++) {
+                Node p = temp.item(i);
+
+                if (p.getNodeType() == Node.ELEMENT_NODE && p.hasAttributes() == false && p.hasChildNodes()) {
+                    if(p.getChildNodes().getLength()==1) {
+                        Node p2 = p.getFirstChild();
+                        if (p2.getNodeType() == Node.TEXT_NODE) {
+                            attrs.set(p.getNodeName(), p2.getNodeValue());
+                        }
+                    }
+                }
+            }
+        }
+
         _dtype  = attrs.getInt("dtype");
 
 
@@ -80,7 +103,7 @@ public class SdNodeSet implements ISdNode{
                 if (e1.hasAttributes()) {//说明是Node类型
                     SdNode temp = Util.createNode(source).buildForNode(e1);
                     this.add(temp);
-                } else {//说明是Set类型
+                } else if(e1.hasChildNodes() && e1.getChildNodes().getLength()>1) {//说明是Set类型
                     SdNodeSet temp = Util.createNodeSet(source).buildForNode(e1);
                     this.add(temp);
                 }

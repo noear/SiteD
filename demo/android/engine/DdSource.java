@@ -35,12 +35,15 @@ public class DdSource extends SdSource {
 
     public final String logo;  //图标
     public final String author;
+    public final String contact;
     public final String alert; //提醒（打开时跳出）
     public final String intro; //介绍
     //---------------------------------------------------
     public final DdNode reward;
     //---------------------------------------------------
+    public final DdNodeSet meta;
     public final DdNodeSet main;
+
     public final DdNode hots;
     public final DdNode updates;
     public final DdNode search;
@@ -90,35 +93,53 @@ public class DdSource extends SdSource {
 
         sited = xml;
 
-        doInit(app, xml, "main");
+        doInit(app, xml);
+        if(schema>0){
+            xmlHeadName = "meta";
+            xmlBodyName = "main";
+            xmlScriptName = "script";
+        }else {
+            xmlHeadName = "meta";
+            xmlBodyName = "main";
+            xmlScriptName = "jscript";
+        }
+        doLoad(app);
 
-        sds = attrs.getString("sds");
-        isPrivate = attrs.getInt("private") > 0;
-        engine = attrs.getInt("engine");
-        ver = attrs.getInt("ver");
-        vip = attrs.getInt("vip");
+        meta = (DdNodeSet) head;
+        main = (DdNodeSet) body;
 
-        author = attrs.getString("author");
-        intro = attrs.getString("intro");
-        logo = attrs.getString("logo");
+
+        //--------------
+
+        sds = head.attrs.getString("sds");
+        isPrivate = head.attrs.getInt("private") > 0;
+        engine = head.attrs.getInt("engine");
+        ver = head.attrs.getInt("ver");
+        vip = head.attrs.getInt("vip");
+
+        author = head.attrs.getString("author");
+        contact = head.attrs.getString("contact");
+
+        intro = head.attrs.getString("intro");
+        logo = head.attrs.getString("logo");
 
         if (engine > DdApi.version())
             alert = "此插件需要更高版本引擎支持，否则会出错。建议升级！";
         else
-            alert = attrs.getString("alert");
+            alert = head.attrs.getString("alert");
 
         //
         //---------------------
         //
 
-        main = (DdNodeSet) body;
         trace_url = main.attrs.getString("trace");
 
         home = (DdNodeSet) main.get("home");
-
-        hots = (DdNode) home.get("hots");
-        updates = (DdNode) home.get("updates");
-        tags = (DdNode) home.get("tags");
+        {
+            hots = (DdNode) home.get("hots");
+            updates = (DdNode) home.get("updates");
+            tags = (DdNode) home.get("tags");
+        }
 
         search = (DdNode) main.get("search");
 
@@ -135,8 +156,13 @@ public class DdSource extends SdSource {
         }
 
 
-        login  = (DdNode) main.get("login");//登录
-        reward = (DdNode) main.get("reward");//打赏
+        if(schema>0) {
+            login = (DdNode) head.get("login");//登录
+            reward = (DdNode) head.get("reward");//打赏
+        }else{
+            login = (DdNode) main.get("login");//登录
+            reward = (DdNode) main.get("reward");//打赏
+        }
 
         //-----------
         ONode json = new ONode();
@@ -168,6 +194,13 @@ public class DdSource extends SdSource {
         }
 
         return _FullTitle;
+    }
+
+    public String webUrl(){
+        if(TextUtils.isEmpty(main.durl))
+            return url;
+        else
+            return main.durl;
     }
 
     @Override
@@ -218,7 +251,7 @@ public class DdSource extends SdSource {
                 }
                 else {
                     String temp = callJs(login, "check", url, cookies);
-                    return temp.equals("1");
+                    return "1".equals(temp);
                 }
             }
         }

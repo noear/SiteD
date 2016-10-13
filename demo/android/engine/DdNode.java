@@ -14,11 +14,13 @@ public class DdNode extends SdNode {
         return (DdSource)source;
     }
 
-    //临时数据寄存（任意）
-    public int dataTag;
 
+    //是否支持全部下载(book[1,2,3])
+    public boolean donwAll = true;
+    //是否显示导航能力（用于：section[1,2,3]）
+    public boolean showNav = true;
+    //是否显示图片（null：默认；0：不显示；1：显示小图；2：显示大图）
     public String showImg;
-
     //是否显示S按钮
     public boolean showWeb=true;
     //屏幕方向（v/h）
@@ -37,6 +39,7 @@ public class DdNode extends SdNode {
 
     public static final int STYLE_VIDEO = 11;
     public static final int STYLE_AUDIO = 12;
+    public static final int STYLE_INWEB = 13;
 
     public DdNode(SdSource source){
         super(source);
@@ -44,6 +47,8 @@ public class DdNode extends SdNode {
 
     @Override
     public void OnDidInit() {
+        donwAll = attrs.getInt("donwAll", 1) > 0;
+        showNav = attrs.getInt("showNav", 1) > 0;
         showImg = attrs.getString("showImg");
         showWeb = attrs.getInt("showWeb", 1) > 0;
         screen  = attrs.getString("screen");

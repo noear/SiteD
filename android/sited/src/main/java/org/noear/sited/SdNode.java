@@ -35,6 +35,14 @@ public class SdNode implements ISdNode{
         }
     }
 
+    private int _btype;
+    public int btype(){
+        if(_btype>0)
+            return _btype;
+        else
+            return dtype();
+    }
+
 
     public int nodeType(){return 1;}
     public String nodeName(){return name;}
@@ -215,6 +223,7 @@ public class SdNode implements ISdNode{
             }
 
             _dtype  = attrs.getInt("dtype");
+            _btype  = attrs.getInt("btype");
 
             this.title   = attrs.getString("title");
             this.method  = attrs.getString("method","get");
@@ -313,6 +322,7 @@ public class SdNode implements ISdNode{
         this.url     = attrs.getString("url");//
         this.txt     = attrs.getString("txt");//
         this.lib     = attrs.getString("lib");
+        this.expr    = attrs.getString("expr");
         this.logo    = attrs.getString("logo");
         this._encode = attrs.getString("encode");
 
@@ -326,6 +336,9 @@ public class SdNode implements ISdNode{
             Node att = nnMap.item(i);
             attrs.set(att.getNodeName(), att.getNodeValue());
         }
+
+        _dtype  = attrs.getInt("dtype");
+        _btype  = attrs.getInt("btype");
 
         this.name = cfg.getTagName();//默认为标签名
 

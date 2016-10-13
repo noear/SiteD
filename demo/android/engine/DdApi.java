@@ -10,6 +10,13 @@ import java.nio.charset.Charset;
  */
 public class DdApi extends SdApi {
     /*
+    * v27: 支持新的插件格式架构
+    *    : 增加 meta.contact
+    * v26: 增加showNav,donwAll控制属性；
+    *    : section[2]支持t=10（原始大小图片，居中）；支持只有group的Item
+    *    : 增加btype; dtag 改为 btag
+    *    : 4,5,6,7，增加{name,logo,list:[...]}格式，确可能有name 和 logo
+    *    : 支付 search 结果跳转到tag
     * v25: 增加@style
     *    : dtype=3、7时，section/book.parse 增加支持：[{url,type,mime,logo}] 格式 //logo可做为图标
     *    : section[1]、book[4].parse 增加支持：{bg,list["",""]}、{bg,list[{url,time}]}格式
@@ -41,7 +48,7 @@ public class DdApi extends SdApi {
     * v8 : 增加parseUrl()->"xxx;xxxx;xxx"的支持
     * */
     public static int version(){
-        return 25;
+        return 27;
     }
 
     public static String unsuan(String str, String key) {

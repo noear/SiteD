@@ -91,14 +91,15 @@ public class HttpMessage {
         if ("post".equals(config.method)) {
             String _strArgs = null;
             if (key != null) {
-                config.getArgs(url, key, page);
+                _strArgs = config.getArgs(url, key, page);
             } else {
-                config.getArgs(url, page);
+                _strArgs = config.getArgs(url, page);
             }
 
-            Log.v("Post.Args", _strArgs);
-
             if (TextUtils.isEmpty(_strArgs) == false) {
+
+                Log.v("Post.Args", _strArgs);
+
                 for (String kv : _strArgs.split(";")) {
                     if (kv.length() > 3) {
                         String name = kv.split("=")[0];

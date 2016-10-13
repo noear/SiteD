@@ -60,4 +60,8 @@ public class SdAttributeList {
         else
             return def;
     }
+
+    public void addAll(SdAttributeList attrs){
+        _items.putAll(attrs._items);
+    }
 }

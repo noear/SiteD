@@ -21,14 +21,16 @@ import java.util.regex.Pattern;
  */
 public class SdSource {
 
-    public final SdAttributeList attrs = new SdAttributeList();
+    private final SdAttributeList attrs = new SdAttributeList();
 
+    public int     schema=0;
     public boolean isDebug;//是否为调试模式
 
     public String url_md5;
     public String url;  //源首页
     public String title; //标题
     public String expr;//匹配源的表达式
+
 
     private String _encode;//编码
     public String encode() {
@@ -57,10 +59,16 @@ public class SdSource {
     }
     //-------------------------------
 
+    public SdNodeSet head;
     public SdNodeSet body;
 
     protected JsEngine js;//不能作为属性
-    protected SdJscript jscript;
+    protected SdJscript script;
+
+    private Element root;
+    protected String  xmlBodyName;
+    protected String  xmlHeadName;
+    protected String  xmlScriptName;
 
     //
     //--------------------------------
@@ -69,15 +77,21 @@ public class SdSource {
 
     }
 
-    public SdSource(Application app, String xml, String xmlBodyNodeName) throws Exception {
-        doInit(app, xml, xmlBodyNodeName);
+    public SdSource(Application app, String xml) throws Exception {
+        doInit(app, xml);
+
+        xmlHeadName = "head";
+        xmlBodyName = "body";
+        xmlScriptName = "script";
+
+        doLoad(app);
     }
 
-    protected void doInit(Application app, String xml, String xmlBodyNodeName) throws Exception {
+    protected void doInit(Application app, String xml) throws Exception {
 
         Util.tryInitCache(app.getApplicationContext());
 
-        Element root = Util.getXmlroot(xml);
+        root = Util.getXmlroot(xml);
 
         {
             NamedNodeMap temp = root.getAttributes();
@@ -93,33 +107,54 @@ public class SdSource {
                 Node p = temp.item(i);
 
                 if (p.getNodeType() == Node.ELEMENT_NODE && p.hasAttributes() == false && p.hasChildNodes()) {
-                    Node p2 = p.getFirstChild();
-                    if (p2.getNodeType() == Node.TEXT_NODE) {
-                        attrs.set(p.getNodeName(), p2.getNodeValue());
+                    if(p.getChildNodes().getLength()==1) {
+                        Node p2 = p.getFirstChild();
+                        if (p2.getNodeType() == Node.TEXT_NODE) {
+                            attrs.set(p.getNodeName(), p2.getNodeValue());
+                        }
                     }
                 }
             }
         }
 
 
+        schema  = attrs.getInt("schema");
         isDebug = attrs.getInt("debug") > 0;
+    }
 
-        title = attrs.getString("title");
-        expr = attrs.getString("expr");
-        url = attrs.getString("url");
-        url_md5 = Util.md5(url);
+    protected void doLoad(Application app){
+        xmlHeadName = attrs.getString("head", xmlHeadName);
+        xmlBodyName = attrs.getString("body", xmlBodyName);
+        xmlScriptName = attrs.getString("script", xmlScriptName);
 
-        _encode = attrs.getString("encode");
-        _ua = attrs.getString("ua");
+        head = Util.createNodeSet(this);
+        head.buildForNode(Util.getElement(root, xmlHeadName));
 
         body = Util.createNodeSet(this);
-        body.buildForNode(Util.getElement(root, xmlBodyNodeName));
+        body.buildForNode(Util.getElement(root, xmlBodyName));
 
+        if(schema==0) {
+            head.attrs = this.attrs;
+        }else{
+            head.attrs.addAll(this.attrs);
+        }
+
+        title = head.attrs.getString("title");
+        expr  = head.attrs.getString("expr");
+        url   = head.attrs.getString("url");
+        url_md5 = Util.md5(url);
+
+        _encode = head.attrs.getString("encode");
+        _ua     = head.attrs.getString("ua");
+
+        //----------
+        //放后面
+        //
         js = new JsEngine(app, this);
-        jscript = new SdJscript(this, Util.getElement(root, "jscript"));
-        jscript.loadJs(app, js);
+        script = new SdJscript(this, Util.getElement(root, xmlScriptName));
+        script.loadJs(app, js);
 
-        OnDidInit();
+        root = null;
     }
 
     protected boolean DoCheck(String url, String cookies, boolean isFromAuto) {
@@ -127,12 +162,6 @@ public class SdSource {
     }
 
     protected void DoTraceUrl(String url, String args, SdNode config) {
-    }
-
-    ;
-
-    public void OnDidInit() {
-
     }
 
 
@@ -245,9 +274,17 @@ public class SdSource {
             }
         }
 
+        //为doParseUrl_Aft服务(要在外围)
+        Map<Integer, String> dataList = new HashMap<>();//如果有多个地址，需要排序
+        __AsyncTag tag = new __AsyncTag();
+
         final int pageX = page;
         final String keyX = key;
+
+        tag.total++;
+
         msg.callback = (code, sender, text, url302) -> {
+            tag.value++;
             if (code == 1) {
 
                 if(TextUtils.isEmpty(url302)) {
@@ -279,6 +316,7 @@ public class SdSource {
 
                             msg0.callback = msg.callback;
 
+                            tag.total++;
                             Util.http(this, isUpdate, msg0);
                         }else{
                             newUrls.add(url1);
@@ -286,8 +324,6 @@ public class SdSource {
                     }
 
                     if(newUrls.size()>0) {
-                        __AsyncTag tag = new __AsyncTag();
-                        Map<Integer, String> dataList = new HashMap<>();//如果有多个地址，需要排序
                         doParseUrl_Aft(viewModel, config, isUpdate, newUrls, sender.form, tag, dataList, callback);
                     }
 
@@ -351,16 +387,21 @@ public class SdSource {
         }
 
         if (TextUtils.isEmpty(config.parse) == false && TextUtils.isEmpty(url) == false) {//如果没有url 和 parse，则不处理
-            tag.total++;
-
             HttpMessage msg = new HttpMessage();
             if(args!=null) {
                 msg.form = args;
             }
 
+            //为doParseUrl_Aft服务(要在外围)
+            Map<Integer, String> dataList = new HashMap<>();//如果有多个地址，需要排序
+
             //2.获取主内容
+            tag.total++;
+
             msg.url = config.getUrl(url);
             msg.callback = (code, sender, text, url302) -> {
+                tag.value++;
+
                 if (code == 1) {
 
                     if(TextUtils.isEmpty(url302)) {
@@ -393,6 +434,7 @@ public class SdSource {
                                 }
                                 msg0.callback = msg.callback;
 
+                                tag.total++;
                                 Util.http(this, isUpdate, msg0);
                             } else {
                                 newUrls.add(url1);
@@ -400,9 +442,6 @@ public class SdSource {
                         }
 
                         if(newUrls.size()>0) {
-                            Map<Integer, String> dataList = new HashMap<>();//如果有多个地址，需要排序
-
-                            tag.total--;//抵消之前的++
                             doParseUrl_Aft(viewModel, config, isUpdate, newUrls, args, tag, dataList, callback);
                         }
                         return;//下面的代码被停掉
@@ -412,7 +451,6 @@ public class SdSource {
                     }
                 }
 
-                tag.value++;
                 if (tag.total == tag.value) {
                     callback.run(code);
                 }
@@ -441,7 +479,7 @@ public class SdSource {
 
                         String json = this.parse(n1, url302, text);
                         if (isDebug) {
-                            Util.log(this, n1, url302, json);
+                            Util.log(this, n1, url302, json, 0);
                         }
 
                         if (json != null) {
@@ -468,6 +506,8 @@ public class SdSource {
             HttpMessage msg = new HttpMessage(config, newUrl2, tag.total, args);
 
             msg.callback = (code2, sender, text2, url302) -> {
+                tag.value++;
+
                 if (code2 == 1) {
                     if(TextUtils.isEmpty(url302)) {
                         url302 = newUrl2;
@@ -476,7 +516,6 @@ public class SdSource {
                     doParse_noAddinForTmp(dataList, config, url302, text2, sender.tag);
                 }
 
-                tag.value++;
                 if (tag.total == tag.value) {
                     List<String> jsonList = new ArrayList<String>();
 
@@ -501,7 +540,7 @@ public class SdSource {
     private void doParse_noAddin(ISdViewModel viewModel, SdNode config, String url, String text) {
         String json = this.parse(config, url, text);
         if (isDebug) {
-            Util.log(this, config, url, json);
+            Util.log(this, config, url, json, 0);
         }
 
         if (json != null) {
@@ -513,7 +552,7 @@ public class SdSource {
         String json = this.parse(config, url, text);
 
         if (isDebug) {
-            Util.log(this, config, url, json);
+            Util.log(this, config, url, json, 0);
         }
 
         if (json != null) {
@@ -526,7 +565,7 @@ public class SdSource {
 
                     String json2 = this.parse(n2, url, text);
                     if (isDebug) {
-                        Util.log(this, n2, url, json2);
+                        Util.log(this, n2, url, json2, 0);
                     }
 
                     if (json2 != null) {
@@ -541,7 +580,7 @@ public class SdSource {
         String json = this.parse(config, url, text);
 
         if (isDebug) {
-            Util.log(this, config, url, json);
+            Util.log(this, config, url, json,tag);
         }
 
         if (json != null) {

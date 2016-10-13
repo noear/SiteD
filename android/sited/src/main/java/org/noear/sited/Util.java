@@ -238,7 +238,8 @@ class Util {
     //--------------------------------
     //
 
-    public static void log(SdSource source, SdNode node, String url, String json) {
+    public static void log(SdSource source, SdNode node, String url, String json, int tag) {
+        log(source, node.name, "tag=" + tag);
         if (url == null)
             log(source, node.name, "url=null");
         else
