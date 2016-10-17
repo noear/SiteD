@@ -49,12 +49,18 @@ public class SdJscript {
                 //2.尝试网络加载
                 Log.v("SdJscript", n1.url);
 
-                n1.cache = 1; //长久缓存js文件
-                Util.http(s, false, n1.url, null, 0, n1, (code, t, text) -> {
+                if(n1.cache==0) {
+                    n1.cache = 1; //长久缓存js文件 //默认长久缓存
+                }
+
+                HttpMessage msg = new HttpMessage(n1,n1.url);
+                msg.callback = (code, sender, text, url302) -> {
                     if (code == 1) {
                         js.loadJs(text);
                     }
-                });
+                };
+
+                Util.http(s, false, msg);
             }
         }
 

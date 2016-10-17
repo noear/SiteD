@@ -7,6 +7,8 @@ import android.util.Log;
 
 import org.noear.ddcat.Navigation;
 import org.noear.ddcat.controller.ActivityBase;
+import org.noear.ddcat.dao.Session;
+import org.noear.ddcat.dao.db.DbApi;
 import org.noear.ddcat.dao.db.SiteDbApi;
 import org.noear.sited.ISdNode;
 import org.noear.sited.SdApi;
@@ -18,6 +20,7 @@ import java.util.HashMap;
 
 import me.noear.exts.Act1;
 import me.noear.utils.HttpUtil;
+import noear.snacks.ONode;
 
 /**
  * Created by yuety on 15/8/3.
@@ -32,15 +35,20 @@ public class DdSource extends SdSource {
 
     public final String logo;  //图标
     public final String author;
+    public final String contact;
     public final String alert; //提醒（打开时跳出）
     public final String intro; //介绍
     //---------------------------------------------------
+    public final DdNode reward;
+    //---------------------------------------------------
+    public final DdNodeSet meta;
     public final DdNodeSet main;
+
     public final DdNode hots;
     public final DdNode updates;
     public final DdNode search;
     public final DdNode tags;
-    public final SdNodeSet home;
+    public final DdNodeSet home;
 
     private  ISdNode _tag;
     private  ISdNode _book;
@@ -60,7 +68,7 @@ public class DdSource extends SdSource {
         return  (DdNode)_section.nodeMatch(url);
     }
 
-    public DdNode object(String url){
+    public DdNode object1(String url){
         Log.v("object.selct::",url);
 
         return  (DdNode)_object.nodeMatch(url);
@@ -85,36 +93,53 @@ public class DdSource extends SdSource {
 
         sited = xml;
 
-        doInit(app, xml, "main");
+        doInit(app, xml);
+        if(schema>0){
+            xmlHeadName = "meta";
+            xmlBodyName = "main";
+            xmlScriptName = "script";
+        }else {
+            xmlHeadName = "meta";
+            xmlBodyName = "main";
+            xmlScriptName = "jscript";
+        }
+        doLoad(app);
 
-        sds       = attrs.getString("sds");
-        isPrivate = attrs.getInt("private") > 0;
-        engine    = attrs.getInt("engine");
-        ver       = attrs.getInt("ver");
-        vip       = attrs.getInt("vip");
+        meta = (DdNodeSet) head;
+        main = (DdNodeSet) body;
 
-        author    = attrs.getString("author");
-        intro     = attrs.getString("intro");
-        logo      = attrs.getString("logo");
 
-        if (engine > DdApi.version)
+        //--------------
+
+        sds = head.attrs.getString("sds");
+        isPrivate = head.attrs.getInt("private") > 0;
+        engine = head.attrs.getInt("engine");
+        ver = head.attrs.getInt("ver");
+        vip = head.attrs.getInt("vip");
+
+        author = head.attrs.getString("author");
+        contact = head.attrs.getString("contact");
+
+        intro = head.attrs.getString("intro");
+        logo = head.attrs.getString("logo");
+
+        if (engine > DdApi.version())
             alert = "此插件需要更高版本引擎支持，否则会出错。建议升级！";
         else
-            alert = attrs.getString("alert");
+            alert = head.attrs.getString("alert");
 
         //
         //---------------------
         //
 
-        main = (DdNodeSet) body;
         trace_url = main.attrs.getString("trace");
 
-
         home = (DdNodeSet) main.get("home");
-
-        hots = (DdNode) home.get("hots");
-        updates = (DdNode) home.get("updates");
-        tags = (DdNode) home.get("tags");
+        {
+            hots = (DdNode) home.get("hots");
+            updates = (DdNode) home.get("updates");
+            tags = (DdNode) home.get("tags");
+        }
 
         search = (DdNode) main.get("search");
 
@@ -123,17 +148,35 @@ public class DdSource extends SdSource {
         _section = main.get("section");
         _object = main.get("object");
 
-        if(_object.isEmpty()){
-            if(_section.isEmpty())
+        if (_object.isEmpty()) {
+            if (_section.isEmpty())
                 _object = _book;
             else
                 _object = _section;
         }
 
 
-        login = (DdNode) main.get("login");
+        if(schema>0) {
+            login = (DdNode) head.get("login");//登录
+            reward = (DdNode) head.get("reward");//打赏
+        }else{
+            login = (DdNode) main.get("login");//登录
+            reward = (DdNode) main.get("reward");//打赏
+        }
 
+        //-----------
+        ONode json = new ONode();
+        json.set("ver", DdApi.version());
+        json.set("udid", Session.udid());
 
+        json.set("uid", Session.userID);
+        json.set("usex", Session.sex);
+        json.set("uvip", Session.isVip);
+        json.set("ulevel", Session.level);
+
+        String jsCode = "SiteD=" + json.toJson() + ";";
+
+        loadJs(jsCode);
     }
 
     private String _FullTitle;
@@ -153,42 +196,102 @@ public class DdSource extends SdSource {
         return _FullTitle;
     }
 
-    @Override
-    public void setCookies(String cookies) {
-        super.setCookies(cookies);
-
-        SiteDbApi.setSourceCookies(this);
+    public String webUrl(){
+        if(TextUtils.isEmpty(main.durl))
+            return url;
+        else
+            return main.durl;
     }
 
     @Override
-    protected boolean DoCheck(String url, String html, String cookies) {
-        if(login.isEmpty()){
-            return true;
-        }else {
-            String temp = callJs(login, "check", url, html, cookies);
+    public void setCookies(String cookies) {
+        if (cookies == null)
+            return;
 
-            return temp.equals("1");
+        Log.v("cookies", cookies);
+
+        if (DoCheck("", cookies, false)) {
+            super.setCookies(cookies);
+            SiteDbApi.setSourceCookies(this);
         }
     }
 
-    public void tryLogin(ActivityBase activity, boolean isMust){
-        if(login.isEmpty())
-            return;
+    @Override
+    public String cookies() {
+        if (TextUtils.isEmpty(_cookies)) {
+            _cookies = SiteDbApi.getSourceCookies(this);
+        }
 
-        if(isMust){
-            login.dataTag=0;
-            doLogin(activity);
+        return _cookies;
+    }
+
+    public boolean isLoggedIn(String url, String cookies) {
+        return DoCheck(url, cookies, false);
+    }
+
+    @Override
+    protected boolean DoCheck(String url, String cookies, boolean isFromAuto) {
+        if(login.isEmpty()){
+            return true;
         }else {
-            if (login.dataTag == 0) {
-                login.dataTag = 1;
-                doLogin(activity);
+
+            if(TextUtils.isEmpty(login.check)){
+                return true;
+            }else {
+                if (url == null || cookies == null)
+                    return false;
+
+                if(isFromAuto){
+                    if(login.isAutoCheck){
+                        String temp = callJs(login, "check", url, cookies);
+                        return temp.equals("1");
+                    }else{
+                        return true;//如果不支持自动,则总是返回ok
+                    }
+                }
+                else {
+                    String temp = callJs(login, "check", url, cookies);
+                    return "1".equals(temp);
+                }
             }
         }
     }
 
+    @Override
+    protected void DoTraceUrl(String url, String args, SdNode config) {
+        if (TextUtils.isEmpty(trace_url) == false) {
+            if (TextUtils.isEmpty(url) == false) {
+                try {
+                    HashMap<String, String> data = new HashMap<>();
+                    data.put("_uid", Session.userID + "");
+                    data.put("_uname", Session.nickname);
+                    data.put("_days", Session.dayNum + "");
+                    data.put("_vip", Session.isVip + "");
+
+                    data.put("url", url);
+                    data.put("args", args);
+                    data.put("node", config.name);
+
+                    HttpUtil.post(trace_url, data, (code, text) -> {
+                    });
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public synchronized void tryLogin(ActivityBase activity, boolean forUser) {
+        if (login.isEmpty())
+            return;
+
+        doLogin(activity);
+    }
+
     private void doLogin(ActivityBase activity){
         if(login.isWebrun()) {
-            Navigation.showWebOnly(activity, login.url);
+            String loginUrl = login.getUrl(login.url);
+            Navigation.showWebAddinLogin(activity, this, loginUrl);
         }else{
 
         }
@@ -236,24 +339,6 @@ public class DdSource extends SdSource {
             }
 
             return true;
-        }
-    }
-
-    public String buildWeb(SdNode config,String url) {
-        if (config.attrs.contains("buildWeb")==false)
-            return url;
-        else
-            return callJs(config, "buildWeb", url, config.jsTag);
-    }
-
-    public void traceUrl(String url ,SdNode confg) {
-        if (TextUtils.isEmpty(trace_url) == false) {
-            HashMap<String, String> data = new HashMap<>();
-            data.put("url", url);
-            data.put("node", confg.name);
-
-            HttpUtil.post(trace_url, data, (code, text) -> {
-            });
         }
     }
 }

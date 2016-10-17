@@ -14,17 +14,32 @@ public class DdNode extends SdNode {
         return (DdSource)source;
     }
 
-    //临时数据寄存（任意）
-    public int dataTag;
 
-
+    //是否支持全部下载(book[1,2,3])
+    public boolean donwAll = true;
+    //是否显示导航能力（用于：section[1,2,3]）
+    public boolean showNav = true;
+    //是否显示图片（null：默认；0：不显示；1：显示小图；2：显示大图）
+    public String showImg;
     //是否显示S按钮
     public boolean showWeb=true;
     //屏幕方向（v/h）
     public String screen;
     //首页图片显示的宽高比例
     public float WHp = 0;
+    //是否循环播放
     public boolean loop = false;
+
+    //只应用于login节点
+    protected String check;
+    protected boolean isAutoCheck = true;
+
+    public String mail;
+    public int style;
+
+    public static final int STYLE_VIDEO = 11;
+    public static final int STYLE_AUDIO = 12;
+    public static final int STYLE_INWEB = 13;
 
     public DdNode(SdSource source){
         super(source);
@@ -32,10 +47,24 @@ public class DdNode extends SdNode {
 
     @Override
     public void OnDidInit() {
+        donwAll = attrs.getInt("donwAll", 1) > 0;
+        showNav = attrs.getInt("showNav", 1) > 0;
+        showImg = attrs.getString("showImg");
         showWeb = attrs.getInt("showWeb", 1) > 0;
         screen  = attrs.getString("screen");
         loop    = attrs.getInt("loop", 0) > 0;
 
+        //只应用于login节点
+        check = attrs.getString("check");
+        isAutoCheck = attrs.getInt("auto") > 0;
+
+        mail  = attrs.getString("mail");
+
+        style = attrs.getInt("style", STYLE_VIDEO);
+
+        if(TextUtils.isEmpty(screen) && style == STYLE_AUDIO) {
+            screen = "v";
+        }
 
         String w = attrs.getString("w");
         if (TextUtils.isEmpty(w) == false) {
@@ -46,27 +75,6 @@ public class DdNode extends SdNode {
 
 
 
-    private  String _trySuffix;
-    public  String[] getSuffixUrl(String url) {
-        if(_trySuffix == null)
-            _trySuffix = attrs.getString("trySuffix");
-
-        if (TextUtils.isEmpty(_trySuffix) || TextUtils.isEmpty(url))
-            return new String[]{url};
-        else {
-            String[] exts = _trySuffix.split("\\|");
-            String[] urls = new String[exts.length];
-            for (int i=0,len=exts.length; i<len; i++) {
-                urls[i] = url.replaceAll(_trySuffix, exts[i]);
-            }
-            return urls;
-        }
-    }
-
-    //是否有分页
-    public boolean hasPaging(){
-        return hasMacro() || TextUtils.isEmpty(buildUrl)==false;
-    }
 
     //是否内部WEB运行
     public boolean isWebrun(){
@@ -88,7 +96,10 @@ public class DdNode extends SdNode {
         return run.indexOf("outweb")>=0;
     }
 
-    public String getWebOnloadCode(){
-        return attrs.getString("web_onload");
+    public String getWebUrl(String url) {
+        if (attrs.contains("buildWeb")==false)
+            return url;
+        else
+            return source.callJs(this, "buildWeb", url);
     }
 }

@@ -12,6 +12,10 @@ public class SdAttributeList {
         _items  =new HashMap<>();
     }
 
+    public int count(){
+        return _items.size();
+    }
+
     public void clear(){
         _items.clear();
     }
@@ -55,5 +59,9 @@ public class SdAttributeList {
             return Long.parseLong(_items.get(key));
         else
             return def;
+    }
+
+    public void addAll(SdAttributeList attrs){
+        _items.putAll(attrs._items);
     }
 }
