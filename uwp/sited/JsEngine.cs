@@ -20,9 +20,9 @@ namespace org.noear.sited {
             //if (s != null) {
             //    engine.RegisterFunction("print", (args) =>
             //    {
-            //        if (args.Length > 0) {
-            //            Util.log(source, "JsEngine.print", args[0].ConvertToString().ToString());
-            //        }
+            //        //if (args.Length > 0) {
+            //        //    Util.log(source, "JsEngine.print", args[0].ConvertToString().ToString());
+            //        //}
             //    });
             //}
         }

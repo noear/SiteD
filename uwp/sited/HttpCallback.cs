@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace org.noear.sited
 {
-    public delegate void HttpCallback(int code,int tag, string text);
+    public delegate void HttpCallback(int code, HttpMessage msg, string text, string url302);
 }

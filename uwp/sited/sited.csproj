@@ -12,7 +12,7 @@
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
     <TargetPlatformVersion>10.0.10586.0</TargetPlatformVersion>
-    <TargetPlatformMinVersion>10.0.10240.0</TargetPlatformMinVersion>
+    <TargetPlatformMinVersion>10.0.10586.0</TargetPlatformMinVersion>
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -113,12 +113,14 @@
     <Compile Include="ChakraBridge\Exceptions\JavaScriptFatalException.cs" />
     <Compile Include="ChakraBridge\Exceptions\JavaScriptScriptException.cs" />
     <Compile Include="ChakraBridge\Exceptions\JavaScriptUsageException.cs" />
+    <Compile Include="ChakraBridge\Functions\PrintFun.cs" />
     <Compile Include="ChakraBridge\Native.cs" />
     <Compile Include="ChakraBridge\Wrappers\JavaScriptEnum.cs" />
     <Compile Include="ChakraBridge\Wrappers\JavaScriptException.cs" />
     <Compile Include="ChakraBridge\Wrappers\JavaScriptPropertyId.cs" />
     <Compile Include="ChakraBridge\Wrappers\JavaScriptTypedef.cs" />
     <Compile Include="ChakraBridge\Wrappers\JavaScriptValue.cs" />
+    <Compile Include="HttpMessage.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="SdApi.cs" />
     <Compile Include="SdAttributeList.cs" />

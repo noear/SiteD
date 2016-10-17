@@ -23,6 +23,14 @@ namespace org.noear.sited {
             }
         }
 
+        private int _btype;
+        public int btype() {
+            if (_btype > 0)
+                return _btype;
+            else
+                return dtype();
+        }
+
         public int nodeType() { return 1; }
         public String nodeName() { return name; }
         public SdNode nodeMatch(String url) { return this; }
@@ -32,7 +40,8 @@ namespace org.noear.sited {
         public string name { get; private set; } //节点名称
         public string title { get; set; }//标题
         public string url { get; set; } //url
-        public string logo { get; private set; } //logo
+        public string txt { get; set; } //url
+        public string logo { get; set; } //logo
         public string expr { get; private set; }
         public string group { get;  set; }
 
@@ -42,13 +51,11 @@ namespace org.noear.sited {
 
         //http
         public string header { get; private set; }  //http header 头需求: cookies|accept
-        internal string method { get; private set; }//http method
+        protected internal string method { get; private set; }//http method
 
         private string _encode;   //http 编码
         private string _ua;     //http ua
-
         
-        public string jsTag ="";//传递给js函数的扩展参数
 
         //cache
         internal int cache = 1;//单位为秒(0不缓存；1不限时间)
@@ -61,8 +68,7 @@ namespace org.noear.sited {
         protected internal string buildArgs;
         protected internal string buildUrl;
         protected internal string buildRef;//
-        //protected internal String buildHeader;
-        protected String buildCookies;
+        protected internal String buildHeader;
 
         //add prop for search or tag
         internal string addCookie; //需要添加的关键字
@@ -159,19 +165,14 @@ namespace org.noear.sited {
                 return _encode;
         }
 
-        
-
-        //获取referer url
-        public string referer(string uri) {
-            return source.buildReferer(this, uri);
-        }
+       
 
         //获取cookies
         public string cookies(string uri) {
             var cookies = source.cookies();
 
-            if (string.IsNullOrEmpty(buildCookies) == false) {
-                cookies = source.callJs(this, "buildCookies", uri, (cookies == null ? "" : cookies));
+            if (attrs.contains("buildCookie")) {
+                cookies = source.callJs(this, "buildCookie", uri, (cookies == null ? "" : cookies));
             }
 
             if (string.IsNullOrEmpty(addCookie) == false) {
@@ -203,6 +204,7 @@ namespace org.noear.sited {
                 }
 
                 _dtype = attrs.getInt("dtype");
+                _btype = attrs.getInt("btype");
 
                 this.title = attrs.getString("title");
                 this.method = attrs.getString("method", "get");
@@ -221,7 +223,7 @@ namespace org.noear.sited {
                 this.buildArgs = attrs.getString("buildArgs");
                 this.buildRef = attrs.getString("buildRef");
                 this.buildUrl = attrs.getString("buildUrl");
-                this.buildCookies = attrs.getString("buildCookies");
+                this.buildHeader = attrs.getString("buildHeader");
 
                 this.args = attrs.getString("args");
 
@@ -288,6 +290,7 @@ namespace org.noear.sited {
             this.title = attrs.getString("title");//可能为null
             this.group = attrs.getString("group");
             this.url   = attrs.getString("url");//
+            this.txt = attrs.getString("txt");//
             this.lib   = attrs.getString("lib");
             this.logo  = attrs.getString("logo");
             this._encode = attrs.getString("encode");
@@ -305,6 +308,7 @@ namespace org.noear.sited {
             this.name = cfg.Name.LocalName;//默认为标签名
 
             this.url = attrs.getString("url");
+            this.txt = attrs.getString("txt");//
             this.method = attrs.getString("method");
             this.header = attrs.getString("header");
             this._encode = attrs.getString("encode");
@@ -315,10 +319,77 @@ namespace org.noear.sited {
             this.parse = attrs.getString("parse");
             this.buildUrl = attrs.getString("buildUrl");
             this.buildRef = attrs.getString("buildRef");
-
-            this.buildCookies = attrs.getString("buildCookies");
+            this.buildHeader = attrs.getString("buildHeader");
 
             return this;
+        }
+
+        //
+        //-------------------------------------------------------------
+        //
+
+        public String getArgs(String url, String key, int page) {
+            if (string.IsNullOrEmpty(this.buildArgs))
+                return this.args;
+            else
+                return source.js.callJs(this.buildArgs, url, key, page + "");
+        }
+
+        public String getArgs( String url, int page) {
+            if (string.IsNullOrEmpty(this.buildArgs))
+                return this.args;
+            else
+                return source.js.callJs(this.buildArgs, url, page + "");
+        }
+
+        public String getUrl() {
+            if (string.IsNullOrEmpty(this.buildUrl))
+                return this.url;
+            else
+                return source.js.callJs(this.buildUrl, this.url);
+        }
+
+        public String getUrl(String url) {
+            if (string.IsNullOrEmpty(this.buildUrl))
+                return url;
+            else
+                return source.js.callJs(this.buildUrl, url ?? "");
+        }
+
+        public String getUrl(String url, int page) {
+            if (string.IsNullOrEmpty(this.buildUrl))
+                return url;
+            else
+                return source.js.callJs(this.buildUrl, url, page + "");
+        }
+
+        public String getUrl(String url, String key, int page) {
+            if (string.IsNullOrEmpty(this.buildUrl))
+                return url;
+            else {
+                return source.js.callJs(this.buildUrl, url, key, page + "");
+            }
+        }
+
+        public String getReferer(String url) {
+            if (string.IsNullOrEmpty(this.buildRef))
+                return url;
+            else
+                return source.js.callJs(this.buildRef, url);
+        }
+        public String getHeader(String url) {
+            if (string.IsNullOrEmpty(this.buildHeader))
+                return header;
+            else
+                return source.js.callJs(this.buildHeader, url);
+        }
+
+        public bool isEmptyUrl() {
+            return string.IsNullOrEmpty(this.buildUrl) && string.IsNullOrEmpty(url);
+        }
+
+        public bool isEmptyHeader() {
+            return string.IsNullOrEmpty(this.buildHeader) && string.IsNullOrEmpty(header);
         }
     }
 }

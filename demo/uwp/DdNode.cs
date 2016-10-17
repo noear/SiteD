@@ -1,16 +1,9 @@
 ﻿using ddcat.uwp.utils;
 using org.noear.sited;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace ddcat.uwp.dao.engine {
     public class DdNode : SdNode {
-      
-
         public DdSource s() {
             return (DdSource)source;
         }
@@ -24,6 +17,12 @@ namespace ddcat.uwp.dao.engine {
         public String screen;
         //宽高比例
         public float WHp = 0;
+        //是否循环播放
+        public bool loop = false;
+
+        //只应用于login节点
+        internal String check;
+        internal bool isAutoCheck;
 
         public DdNode(SdSource source) : base(source) {
 
@@ -33,7 +32,11 @@ namespace ddcat.uwp.dao.engine {
             
             showWeb = attrs.getInt("showWeb", 1) > 0;
             screen = attrs.getString("screen");
+            loop = attrs.getInt("loop", 0) > 0;
 
+            //只应用于login节点
+            check = attrs.getString("check");
+            isAutoCheck = attrs.getInt("auto") > 0;
 
             String w = attrs.getString("w");
             if (TextUtils.isEmpty(w) == false) {
@@ -42,27 +45,11 @@ namespace ddcat.uwp.dao.engine {
             }
         }
 
-
-        private String _trySuffix;
-        public String[] getSuffixUrl(String url) {
-            if (_trySuffix == null)
-                _trySuffix = attrs.getString("trySuffix");
-
-            if (string.IsNullOrEmpty(_trySuffix) || string.IsNullOrEmpty(url))
-                return new String[] { url };
-            else {
-                String[] exts = _trySuffix.Split('|');
-                String[] urls = new String[exts.Length];
-                for (int i = 0, len = exts.Length; i < len; i++) {
-                    urls[i] = Regex.Replace(url, _trySuffix, exts[i]);
-                }
-                return urls;
-            }
-        }
+       
 
         //是否有分页
         public bool hasPaging() {
-            return hasMacro() || string.IsNullOrEmpty(buildUrl) == false;
+            return hasMacro() || string.IsNullOrEmpty(buildUrl) == false || "post" == method;
         }
 
 
@@ -82,10 +69,6 @@ namespace ddcat.uwp.dao.engine {
                 return false;
 
             return run.IndexOf("outweb") >= 0;
-        }
-
-        public String getWebOnloadCode() {
-            return attrs.getString("web_onload");
         }
     }
 }

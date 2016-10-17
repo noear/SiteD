@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Windows.Storage;
 using Windows.UI.Xaml;
 
 namespace org.noear.sited {
@@ -27,7 +29,7 @@ namespace org.noear.sited {
             }
         }
 
-        public void loadJs(JsEngine js) {
+        public  void loadJs(JsEngine js) {
             if (require.isEmpty() == false) {
                 foreach (SdNode n1 in require.items()) {
                     //1.如果本地可以加载并且没有出错
@@ -39,13 +41,18 @@ namespace org.noear.sited {
                     //2.尝试网络加载
                     Log.v("SdJscript", n1.url);
 
-                    n1.cache = 1;
-                    Util.http(s, false, n1.url, null, 0, n1, (code,t, text) =>
-                    {
+                    if (n1.cache == 0) {
+                        n1.cache = 1;
+                    }
+
+                    HttpMessage msg = new HttpMessage(n1, n1.url);
+                    msg.callback = (code, sender, text, url302) => {
                         if (code == 1) {
                             js.loadJs(text);
                         }
-                    });
+                    };
+
+                    Util.http(s, false, msg);
                 }
             }
 
@@ -53,55 +60,46 @@ namespace org.noear.sited {
                 js.loadJs(code);
             }
         }
-        
-        bool loadLib(JsEngine js, String lib) {
-            
-            /*
-            //for debug
-            Resources asset = app.getResources();
 
+        bool loadLib(JsEngine js, String lib) {
+            //for debug
             switch (lib) {
                 case "md5":
-                    return tryLoadLibItem(asset, R.raw.md5, js);
+                    return  tryLoadLibItem("md5.js", js);
 
                 case "sha1":
-                    return tryLoadLibItem(asset, R.raw.sha1, js);
+                    return  tryLoadLibItem("sha1.js", js);
 
                 case "base64":
-                    return tryLoadLibItem(asset, R.raw.base64, js);
+                    return  tryLoadLibItem("base64.js", js);
 
                 case "cheerio":
-                    return tryLoadLibItem(asset, R.raw.cheerio, js);
+                    return  tryLoadLibItem("cheerio.js", js);
 
                 default:
                     return false;
-            }*/
-
-            return false;
+            }
         }
-        /*
-        static boolean tryLoadLibItem(Resources asset, int resID, JsEngine js) {
+
+        static bool tryLoadLibItem(String name, JsEngine js) {
             try {
-                InputStream is = asset.openRawResource(resID);
-                BufferedReader in = new BufferedReader(new InputStreamReader(is, "utf-8"));
-                String code = doToString(in);
+                //Uri fileUri = new Uri("ms-appx:///raw/" + uri);
+                //StorageFile file = StorageFile.GetFileFromApplicationUriAsync(fileUri).GetResults();
+                //String code =  FileIO.ReadTextAsync(file).GetResults();
+
+                Assembly asset = Assembly.Load(new AssemblyName("sited"));
+                Stream stream = asset.GetManifestResourceStream("org.noear.sited.raw." + name);
+
+                string code = new StreamReader(stream, Encoding.UTF8).ReadToEnd();
+
                 js.loadJs(code);
 
                 return true;
             }
-            catch (Exception ex) {
+            catch (Exception) {
                 return false;
             }
         }
-
-        static String doToString(BufferedReader in) throws IOException
-        {
-            StringBuffer buffer = new StringBuffer();
-        String line = "";
-        while ((line = in.readLine()) != null){
-            buffer.append(line);
-        }
-        return buffer.toString();
-    }*/
+        
     }
 }

@@ -34,7 +34,7 @@ namespace org.noear.sited {
         }
 
         public String name;
-        public readonly SdAttributeList attrs = new SdAttributeList();
+        public SdAttributeList attrs = new SdAttributeList();
 
         internal SdNodeSet buildForNode(XElement element) {
             if (element == null)
@@ -49,6 +49,17 @@ namespace org.noear.sited {
                 foreach (var p in element.Attributes()) {
                     attrs.set(p.Name.LocalName, p.Value);
                 }
+
+                foreach (var p in element.Elements()) {
+                    if (p.HasAttributes == false) {
+                        if (new List<XNode>(p.Nodes()).Count == 1) {
+                            var p2 = p.FirstNode;
+                            if (p2 != null && p2.NodeType == System.Xml.XmlNodeType.Text) {
+                                attrs.set(p.Name.LocalName, p.Value);
+                            }
+                        }
+                    }
+                }
             }
 
             _dtype = attrs.getInt("dtype");
@@ -58,7 +69,7 @@ namespace org.noear.sited {
                     SdNode temp = Util.createNode(source).buildForNode(e1);
                     this.add(temp);
                 }
-                else {
+                else if(e1.HasElements){
                     SdNodeSet temp = Util.createNodeSet(source).buildForNode(e1);
                     this.add(temp);
                 }

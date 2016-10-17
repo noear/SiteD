@@ -20,6 +20,7 @@ namespace org.noear.sited {
             }
         }
 
+        internal const String NEXT_CALL = "CALL::";
         public const String defUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240";
 
         public static int parseInt(String str) {
@@ -48,114 +49,95 @@ namespace org.noear.sited {
 
        
 
-        public async static void http(SdSource source, bool isUpdate, String url, Dictionary<String, String> args, int tag, SdNode config, HttpCallback callback) {
-            __CacheBlock block = null;
-            String cacheKey = null;
-            if (args == null)
-                cacheKey = url;
+        public async static void http(SdSource source, bool isUpdate, HttpMessage msg) {
+            log(source, "Util.http", msg.url);
+
+            String cacheKey2 = null;
+            String args = "";
+            if (msg.form == null)
+                cacheKey2 = msg.url;
             else {
                 StringBuilder sb = new StringBuilder();
-                sb.Append(url);
-                foreach (String key in args.Keys) {
-                    sb.Append(key).Append("=").Append(args[key]).Append(";");
+                sb.Append(msg.url);
+                foreach (String key in msg.form.Keys) {
+                    sb.Append(key).Append("=").Append(msg.form[key]).Append(";");
                 }
-                cacheKey = sb.ToString();
+                cacheKey2 = sb.ToString();
+                args = cacheKey2;
             }
+             String cacheKey = cacheKey2;
 
-            if (isUpdate == false && config.cache > 0) {
-                block = await cache.get(cacheKey);
-            }
+            __CacheBlock block = await cache.get(cacheKey);
 
-            if (block != null) {
-                if (config.cache == 1 || block.seconds() <= config.cache) {
-                    await Task.Delay(100);
-                    callback(1, tag, block.value);
+            if (isUpdate == false && msg.config.cache > 0) {
+                if (block != null && block.isOuttime(msg.config) == false) {
+                    log(source, "Util.incache.url", msg.url);
+                    msg.callback(1, msg, block.value, null);
                     return;
                 }
             }
 
-            doHttp(source, url, args, tag, config, block, async (code, tag2, data) =>
-            {
-                if (code == 1 && config.cache > 0) {
-                    await cache.save(cacheKey, data);
+            doHttp(source, msg, block, (code, msg2, data, url302) => {
+                if (code == 1) {
+                    cache.save(cacheKey, data);
                 }
 
-                callback(code, tag2, data);
+                msg.callback(code, msg2, data, url302);
             });
+
+            source.DoTraceUrl(msg.url, args, msg.config);
         }
 
-        private static async void doHttp(SdSource source, String url, Dictionary<String, String> args, int tag, SdNode config, __CacheBlock cache, HttpCallback callback) {
-            var encoding = Encoding.GetEncoding(config.encode());
+        private static async void doHttp(SdSource source, HttpMessage msg, __CacheBlock cache, HttpCallback callback) {
+            var encoding = Encoding.GetEncoding(msg.config.encode());
 
             AsyncHttpClient client = new AsyncHttpClient();
-            client.UserAgent(config.ua());
-            client.Encoding(config.encode());
+            client.UserAgent(msg.config.ua());
+            client.Encoding(msg.config.encode());
 
-            if (config.isInCookie()) {
-                String cookies = config.cookies(url);
-                if (cookies != null) {
-                    client.Cookies(cookies);
-                }
-            }
-            
-
-         
-
-            if (config.isInReferer()) {
-                client.Referer(source.buildReferer(config, url));
-            }
-
-            if (string.IsNullOrEmpty(config.header) == false) {
-                foreach (String kv in config.header.Split(';')) {
-                    String[] kv2 = kv.Split('=');
-                    if (kv2.Length == 2) {
-                        client.Header(kv2[0], kv2[1]);
-                    }
-                }
+            foreach (String key in msg.header.Keys) {
+                client.Header(key, msg.header[key]);
             }
 
             string newUrl = null;
-            if (url.IndexOf(" ") >= 0)
-                newUrl = Uri.EscapeUriString(url);
+            if (msg.url.IndexOf(" ") >= 0)
+                newUrl = Uri.EscapeUriString(msg.url);
             else
-                newUrl = url;
-            {
-                int idx = newUrl.IndexOf('#'); //去除hash，即#.*
-                String url2 = null;
-                if (idx > 0)
-                    url2 = newUrl.Substring(0, idx);
-                else
-                    url2 = url;
+                newUrl = msg.url;
 
-                client.Url(url2);
-            }
+            client.Url(newUrl);
 
             string temp = null;
 
+            AsyncHttpResponse rsp = null;
             try {
-                AsyncHttpResponse rsp = null;
-                if ("post".Equals(config.method))
-                    rsp = await client.Post(args);
+                if ("post".Equals(msg.config.method))
+                    rsp = await client.Post(msg.form);
                 else
                     rsp = await client.Get();
 
                 if (rsp.StatusCode == HttpStatusCode.OK) {
                     source.setCookies(rsp.Cookies);
                     temp = rsp.GetString();
+
+                    if (string.IsNullOrEmpty(rsp.location) == false) {
+                        Uri uri = new  Uri(msg.url);
+                        rsp.location = uri.Scheme + "://" + uri.Host + rsp.location;
+                    }
                 }
             }
-            catch(Exception ex) {
+            catch (Exception ex) {
                 Util.log(source, "HTTP", ex.Message);
             }
 
             if (temp == null) {
-                if (cache == null)
-                    callback(-2,tag, null);
+                if (cache == null || cache.value == null)
+                    callback(-2, msg, null, rsp.location);
                 else
-                    callback(1,tag, cache.value);
+                    callback(1, msg, cache.value, rsp.location);
             }
             else
-                callback(1,tag, temp);
+                callback(1, msg, temp, rsp.location);
         }
         
         public static String md5(String code)
@@ -171,8 +153,10 @@ namespace org.noear.sited {
         //--------------------------------
         //
 
-        public static void log(SdSource source, SdNode node, String url, String json)
+        public static void log(SdSource source, SdNode node, String url, String json, int tag)
         {
+            log(source, node.name, "tag=" + tag);
+
             if (url == null)
                 log(source, node.name, "url=null");
             else

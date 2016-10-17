@@ -11,6 +11,10 @@ namespace org.noear.sited {
             _items = new Dictionary<string, string>();
         }
 
+        public int count() {
+            return _items.Count;
+        }
+
         public void clear() {
             _items.Clear();
         }
@@ -54,6 +58,12 @@ namespace org.noear.sited {
                 return long.Parse(_items[key]);
             else
                 return def;
+        }
+
+        public void addAll(SdAttributeList attrs) {
+            foreach (var kv in attrs._items) {
+                _items.Add(kv.Key, kv.Value);
+            }
         }
     }
 }

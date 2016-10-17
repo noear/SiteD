@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 namespace ddcat.uwp.dao.engine {
     public class DdApi : SdApi {
         /*
+         * v19: 完成插件WEB登录功能，并验证
+         * v18: 小说插件输出改为：[{d:'',t:1},...]格式
          * v17: 增加object节点配置
          * v16: 增加buildCookie;增加处理分支；增加loop属性
          * v15: 增加login、trace支持;;;协加无目录视频插件支持（dtype=7）;;调整节点插件的处理方式
@@ -21,7 +23,7 @@ namespace ddcat.uwp.dao.engine {
          * v9 : 增加对#hash的过滤处理；增加hasMicroDefine()
          * v8 : 增加parseUrl()->"xxx;xxxx;xxx"的支持
          * */
-        public const int version = 16;
+        public const int version = 19;
 
         public static string unsuan(string str, string key) {
             StringBuilder sb = new StringBuilder();

@@ -133,41 +133,110 @@ namespace ddcat.uwp.dao.engine {
         }
 
         public override void setCookies(String cookies) {
-            base.setCookies(cookies);
-
-            SiteDbApi.setSourceCookies(this);
-        }
-        
-        protected override bool DoCheck(String url, String html, String cookies) {
-            if (login.isEmpty()) {
-                return true;
-            }
-            else {
-                String temp = callJs(login, "check", url, html, cookies);
-
-                return "1" == temp;
-            }
-        }
-
-        public void tryLogin(bool isMust) {
-            if (login.isEmpty())
+            if (cookies == null)
                 return;
 
-            if (isMust) {
-                login.dataTag = 0;
-                doLogin();
+            Log.v("cookies", cookies);
+
+            if (DoCheck("", cookies, false))
+            {
+                base.setCookies(cookies);
+                SiteDbApi.setSourceCookies(this);
             }
-            else {
-                if (login.dataTag == 0) {
-                    login.dataTag = 1;
-                    doLogin();
+        }
+
+        public override string cookies() {
+            if (TextUtils.isEmpty(_cookies))
+            {
+                _cookies = SiteDbApi.getSourceCookies(this);
+            }
+
+            return _cookies;
+        }
+
+        public bool isLoggedIn(String url, String cookies) {
+            return DoCheck(url, cookies, false);
+        }
+
+        protected override bool DoCheck(String url, String cookies, bool isFromAuto) {
+            if (login.isEmpty())
+            {
+                return true;
+            }
+            else
+            {
+                if (TextUtils.isEmpty(login.check))
+                {
+                    return true;
+                }
+                else
+                {
+                    if (url == null || cookies == null)
+                        return false;
+
+                    if (isFromAuto)
+                    {
+                        if (login.isAutoCheck)
+                        {
+                            String temp = callJs(login, "check", url, cookies);
+                            return temp.Equals("1");
+                        }
+                        else
+                        {
+                            return true;//如果不支持自动,则总是返回ok
+                        }
+                    }
+                    else
+                    {
+                        String temp = callJs(login, "check", url, cookies);
+                        return temp.Equals("1");
+                    }
                 }
             }
         }
 
+        protected override void DoTraceUrl(String url, String args, SdNode config)
+        {
+            if (TextUtils.isEmpty(trace_url) == false)
+            {
+                if (TextUtils.isEmpty(url) == false)
+                {
+                    try
+                    {
+                        var data = new Dictionary<String, String>();
+                        data.Add("_uid", Session.userID + "");
+                        data.Add("_uname", Session.nickname);
+                        data.Add("_days", Session.dayNum + "");
+                        data.Add("_vip", Session.isVip + "");
+
+                        data.Add("url", url);
+                        data.Add("args", args);
+                        data.Add("node", config.name);
+
+                        HttpUtil.post(trace_url, data, (code, text) =>
+                        {
+                        });
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+            }
+        }
+
+        public void tryLogin(bool forUser)
+        {
+            if (login.isEmpty())
+                return;
+            
+            doLogin();
+        }
+
         private void doLogin() {
             if (login.isWebrun()) {
-                Navigation.showWebOnly(login.url);
+                String loginUrl = buildUrl(login, login.url);
+                Navigation.showWebAddinLogin(this, loginUrl);
             }
             else {
 
@@ -202,6 +271,7 @@ namespace ddcat.uwp.dao.engine {
                 if (_isAlerted == false) {
                     HintUtil.confirm(alert, "继续", "退出", (isOk) =>
                     {
+                        _isAlerted = isOk;
                         callback(isOk);
                     });
                 }
